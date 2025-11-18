@@ -1,0 +1,174 @@
+﻿*** Begin Patch
+*** Update File: app/home/HomeClient.jsx
+@@
+-      <section className="grid gap-4 lg:grid-cols-2">
+-        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+-          <div className="flex items-center justify-between mb-4">
+-            <h3 className="text-lg font-semibold text-slate-900">Distribuci�n de ingresos</h3>
+-            <span className="text-xs text-slate-500">
+-              {graficoIngresos.length ? `${graficoIngresos.length} categor�as` : "Sin datos"}
+-            </span>
+-          </div>
+-          <div className="h-72">
+-            {graficoIngresos.length ? (
+-              <ResponsiveContainer>
+-                <PieChart>
+-                  <Pie data={graficoIngresos} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={4}>
+-                    {graficoIngresos.map((entry, index) => (
+-                      <Cell key={entry.name} fill={ingresosColors[index % ingresosColors.length]} />
+-                    ))}
+-                  </Pie>
+-                  <Tooltip />
+-                </PieChart>
+-              </ResponsiveContainer>
+-              <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+-                {graficoIngresos.map((item, index) => (
+-                  <div key={`${item.name}-${index}`} className="flex items-center gap-2">
+-                    <span
+-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+-                      style={{ backgroundColor: ingresosColors[index % ingresosColors.length] }}
+-                    />
+-                    <span className="flex-1 truncate" title={item.name}>
+-                      {item.name}
+-                    </span>
+-                    <span className="font-medium text-slate-700">{fmtUYU(item.value)}</span>
+-                  </div>
+-                ))}
+-              </div>
+-            ) : (
+-              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500">
+-                Registr� al menos un ingreso para ver la distribuci�n.
+-              </div>
+-            )}
+-          </div>
+-        </article>
+-
+-        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+-          <div className="flex items-center justify-between mb-4">
+-            <h3 className="text-lg font-semibold text-slate-900">Distribuci�n de egresos</h3>
+-            <span className="text-xs text-slate-500">
+-              {graficoEgresos.length ? `${graficoEgresos.length} categor�as` : "Sin datos"}
+-            </span>
+-          </div>
+-          <div className="h-72">
+-            {graficoEgresos.length ? (
+-              <ResponsiveContainer>
+-                <PieChart>
+-                  <Pie data={graficoEgresos} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={4}>
+-                    {graficoEgresos.map((entry, index) => (
+-                      <Cell key={entry.name} fill={egresosColors[index % egresosColors.length]} />
+-                    ))}
+-                  </Pie>
+-                  <Tooltip />
+-                </PieChart>
+-              </ResponsiveContainer>
+-              <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+-                {graficoIngresos.map((item, index) => (
+-                  <div key={`${item.name}-${index}`} className="flex items-center gap-2">
+-                    <span
+-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+-                      style={{ backgroundColor: ingresosColors[index % ingresosColors.length] }}
+-                    />
+-                    <span className="flex-1 truncate" title={item.name}>
+-                      {item.name}
+-                    </span>
+-                    <span className="font-medium text-slate-700">{fmtUYU(item.value)}</span>
+-                  </div>
+-                ))}
+-              </div>
+-            ) : (
+-              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500">
+-                Registr� egresos para identificar los rubros m�s pesados.
+-              </div>
+-            )}
+-          </div>
+-        </article>
+-      </section>
++      <section className="grid gap-4 lg:grid-cols-2">
++        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
++          <div className="flex items-center justify-between mb-4">
++            <h3 className="text-lg font-semibold text-slate-900">Distribución de ingresos</h3>
++            <span className="text-xs text-slate-500">
++              {graficoIngresos.length ? `${graficoIngresos.length} categorías` : "Sin datos"}
++            </span>
++          </div>
++          <div className="h-72">
++            {graficoIngresos.length ? (
++              <>
++                <ResponsiveContainer>
++                  <PieChart>
++                    <Pie data={graficoIngresos} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={4}>
++                      {graficoIngresos.map((entry, index) => (
++                        <Cell key={entry.name} fill={ingresosColors[index % ingresosColors.length]} />
++                      ))}
++                    </Pie>
++                    <Tooltip />
++                  </PieChart>
++                </ResponsiveContainer>
++                <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
++                  {graficoIngresos.map((item, index) => (
++                    <div key={`${item.name}-${index}`} className="flex items-center gap-2">
++                      <span
++                        className="h-2.5 w-2.5 shrink-0 rounded-full"
++                        style={{ backgroundColor: ingresosColors[index % ingresosColors.length] }}
++                      />
++                      <span className="flex-1 truncate" title={item.name}>
++                        {item.name}
++                      </span>
++                      <span className="font-medium text-slate-700">{fmtUYU(item.value)}</span>
++                    </div>
++                  ))}
++                </div>
++              </>
++            ) : (
++              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500">
++                Registrá al menos un ingreso para ver la distribución.
++              </div>
++            )}
++          </div>
++        </article>
++
++        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
++          <div className="flex items-center justify-between mb-4">
++            <h3 className="text-lg font-semibold text-slate-900">Distribución de egresos</h3>
++            <span className="text-xs text-slate-500">
++              {graficoEgresos.length ? `${graficoEgresos.length} categorías` : "Sin datos"}
++            </span>
++          </div>
++          <div className="h-72">
++            {graficoEgresos.length ? (
++              <>
++                <ResponsiveContainer>
++                  <PieChart>
++                    <Pie data={graficoEgresos} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={4}>
++                      {graficoEgresos.map((entry, index) => (
++                        <Cell key={entry.name} fill={egresosColors[index % egresosColors.length]} />
++                      ))}
++                    </Pie>
++                    <Tooltip />
++                  </PieChart>
++                </ResponsiveContainer>
++                <div className="mt-4 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
++                  {graficoEgresos.map((item, index) => (
++                    <div key={`${item.name}-${index}`} className="flex items-center gap-2">
++                      <span
++                        className="h-2.5 w-2.5 shrink-0 rounded-full"
++                        style={{ backgroundColor: egresosColors[index % egresosColors.length] }}
++                      />
++                      <span className="flex-1 truncate" title={item.name}>
++                        {item.name}
++                      </span>
++                      <span className="font-medium text-slate-700">{fmtUYU(item.value)}</span>
++                    </div>
++                  ))}
++                </div>
++              </>
++            ) : (
++              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm text-slate-500">
++                Registrá egresos para identificar los rubros más pesados.
++              </div>
++            )}
++          </div>
++        </article>
++      </section>
+*** End Patch

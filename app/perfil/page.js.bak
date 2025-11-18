@@ -1,0 +1,237 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+
+const LS_PROFILE = "miadmi:perfil";
+const LS_GEN = "miadmi:estimacion_general";
+const LS_ESP = "miadmi:estimacion_especifica";
+const LS_EST = "miadmi:egresos_estimables";
+
+const n = (v) => {
+  const x = Number(String(v ?? "").replace(",", "."));
+  return Number.isFinite(x) ? x : 0;
+};
+const fmt = (v) =>
+  new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(v || 0);
+
+export default function PerfilPage() {
+  const [profile, setProfile] = useState({
+    nombre: "",
+    apellido: "",
+    edad: "",
+    ubicacion: "",
+    ocupacion: "",
+    correo: "",
+    foto: "",
+  });
+  const [passwd, setPasswd] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const [draft, setDraft] = useState(profile);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_PROFILE);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p) setProfile((prev) => ({ ...prev, ...p }));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
+    } catch {}
+  }, [profile]);
+
+  useEffect(() => {
+    if (showConfig) setDraft(profile);
+  }, [showConfig]);
+
+  // KPI igual a Inicio (ingresos, egresos, saldo, %)
+  const strip = (s) => {
+    try { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); } catch { return String(s || "").toLowerCase(); }
+  };
+  const keyEquals = (a, b) => strip(a) === strip(b);
+  const [kpi, setKpi] = useState({ saldo: 0, pct: 0, ingresos: 0, egresos: 0 });
+  const computeKpi = () => {
+    try {
+      const g = JSON.parse(localStorage.getItem(LS_GEN) || "null") || {};
+      const e = JSON.parse(localStorage.getItem(LS_ESP) || "null") || {};
+      const est = JSON.parse(localStorage.getItem(LS_EST) || "null") || {};
+
+      const ingresosGen = n(g.sueldos) + n(g.otrosIngresos);
+      const egresosGen = (Array.isArray(g.egresos) ? g.egresos : []).reduce((a, it) => a + n(it?.monto), 0);
+
+      const ingresosEsp = e?.ingresos
+        ? (Array.isArray(e.ingresos)
+            ? e.ingresos.reduce((a, it) => a + n(it?.monto), 0)
+            : Object.values(e.ingresos).reduce((a, v) => a + n(v), 0))
+        : 0;
+
+      const egrosObjEsp = e?.egresos && typeof e.egresos === "object" ? e.egresos : (e && !e.ingresos && !e.egresos && typeof e === "object" ? e : {});
+      const egresosEsp = Object.values(egrosObjEsp).reduce((a, v) => a + n(v), 0);
+
+      const d = new Date();
+      const ymNow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const totalPrest = (Array.isArray(est?.prestamos) ? est.prestamos : []).reduce((a, p) => a + (n(p.cuotas) > 0 ? n(p.montoCuota) : 0), 0);
+      const totalTarj = (Array.isArray(est?.tarjetas) ? est.tarjetas : []).reduce((a, t) => a + (n(t.cuotas) > 0 ? n(t.montoCuota) : 0), 0);
+      const totalComp = (Array.isArray(est?.compras) ? est.compras : []).reduce((a, c) => a + (String(c?.mes || "") === ymNow ? n(c?.valor) : 0), 0);
+
+      const espKeys = Object.keys(egrosObjEsp || {});
+      const effPrest = espKeys.some((k) => keyEquals(k, "Préstamos")) ? 0 : totalPrest;
+      const effTarj = espKeys.some((k) => keyEquals(k, "Tarjetas")) ? 0 : totalTarj;
+      const effComp = espKeys.some((k) => keyEquals(k, "Posibles compras")) ? 0 : totalComp;
+
+      const ingresos = Math.max(0, ingresosGen + ingresosEsp);
+      const egresos = Math.max(0, egresosGen + egresosEsp + effPrest + effTarj + effComp);
+      const saldo = ingresos - egresos;
+      const pct = ingresos > 0 ? Math.round((saldo / ingresos) * 1000) / 10 : 0;
+      setKpi({ saldo, pct, ingresos, egresos });
+    } catch {
+      setKpi({ saldo: 0, pct: 0, ingresos: 0, egresos: 0 });
+    }
+  };
+  useEffect(() => {
+    computeKpi();
+    const onFocus = () => computeKpi();
+    const onVis = () => { if (document.visibilityState === "visible") computeKpi(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  const diff = useMemo(() => {
+    try {
+      const g = JSON.parse(localStorage.getItem(LS_GEN) || "null") || {};
+      const e = JSON.parse(localStorage.getItem(LS_ESP) || "null") || {};
+      const est = JSON.parse(localStorage.getItem(LS_EST) || "null") || {};
+      const ingresosGen = n(g.sueldos) + n(g.otrosIngresos);
+      const egresosGen = (Array.isArray(g.egresos) ? g.egresos : []).reduce((a, it) => a + n(it?.monto), 0);
+      const ingresosEsp = e?.ingresos
+        ? (Array.isArray(e.ingresos)
+            ? e.ingresos.reduce((a, it) => a + n(it?.monto), 0)
+            : Object.values(e.ingresos).reduce((a, v) => a + n(v), 0))
+        : 0;
+      const egrosObjEsp = e?.egresos && typeof e.egresos === "object" ? e.egresos : (e && !e.ingresos && !e.egresos && typeof e === "object" ? e : {});
+      const egresosEsp = Object.values(egrosObjEsp).reduce((a, v) => a + n(v), 0);
+      const totalPrest = (Array.isArray(est?.prestamos) ? est.prestamos : []).reduce((a, p) => a + (n(p.cuotas) > 0 ? n(p.montoCuota) : 0), 0);
+      const totalTarj = (Array.isArray(est?.tarjetas) ? est.tarjetas : []).reduce((a, t) => a + (n(t.cuotas) > 0 ? n(t.montoCuota) : 0), 0);
+      const ingresos = Math.max(0, ingresosGen + ingresosEsp);
+      const egresos = Math.max(0, egresosGen + egresosEsp + totalPrest + totalTarj);
+      return ingresos - egresos;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  const onFile = (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setDraft((p) => ({ ...p, foto: String(reader.result || "") }));
+    reader.readAsDataURL(file);
+  };
+
+  const logout = () => {
+    alert("Logout (placeholder). Integraremos auth luego.");
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-semibold text-white">Perfil</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowConfig(true)} className="rounded-lg border px-3 py-1.5 bg-white text-gray-900">Configuraci�n</button>
+          <button onClick={logout} className="rounded-lg border px-3 py-1.5 bg-rose-600 text-white">Log out</button>
+        </div>
+      </header>
+
+      {/* Resumen */}
+      <section className="rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
+        <div className="flex items-center gap-4">
+          <div className="h-20 w-20 rounded-full overflow-hidden bg-white border">
+            {profile.foto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.foto} alt="Foto de perfil" className="h-full w-full object-cover" />
+            ) : (
+              <Image src="/logo.png" alt="Mi Admi" width={80} height={80} className="h-20 w-20 object-contain" />
+            )}
+          </div>
+          <div>
+            <div className="text-xl font-semibold">
+              {(profile.nombre || "").trim()} {(profile.apellido || "").trim()}
+            </div>
+            <div className="text-sm text-gray-600">Ocupación: {profile.ocupacion || "—"}</div>
+          </div>
+          <div className="ml-auto rounded-lg border bg-white p-3 shadow-sm text-right">
+            <div className="text-[11px] uppercase tracking-wide text-gray-500">Dif. ingresos − egresos</div>
+            <div className={["text-xl font-semibold", kpi.saldo >= 0 ? "text-emerald-700" : "text-rose-700"].join(" ")}>{fmt(kpi.saldo)}</div>
+            <div className="text-[11px] text-gray-600">{kpi.pct}%</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Modal de Configuraci�n */}
+      {showConfig ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfig(false)} />
+          <div className="relative z-10 w-full max-w-3xl rounded-2xl bg-white text-gray-900 shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-semibold">Configuraci�n</h2>
+              <button onClick={() => setShowConfig(false)} className="text-sm text-gray-600">Cerrar</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-sm text-gray-700">Nombre y apellido</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <input className="border rounded px-3 py-2 bg-white" value={draft.nombre} onChange={(e) => setDraft((d) => ({ ...d, nombre: e.target.value }))} placeholder="Nombre" />
+                  <input className="border rounded px-3 py-2 bg-white" value={draft.apellido} onChange={(e) => setDraft((d) => ({ ...d, apellido: e.target.value }))} placeholder="Apellido" />
+                </div>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-gray-700">Edad</span>
+                <input className="border rounded px-3 py-2 bg-white" value={draft.edad} onChange={(e) => setDraft((d) => ({ ...d, edad: e.target.value }))} inputMode="numeric" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-gray-700">Ubicación</span>
+                <select className="border rounded px-3 py-2 bg-white" value={draft.ubicacion} onChange={(e) => setDraft((d) => ({ ...d, ubicacion: e.target.value }))}>
+                  {[
+                    "Artigas","Canelones","Cerro Largo","Colonia","Durazno","Flores","Florida","Lavalleja","Maldonado","Montevideo","Paysandú","Río Negro","Rivera","Rocha","Salto","San José","Soriano","Tacuarembó","Treinta y Tres"
+                  ].map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-gray-700">Ocupación</span>
+                <input className="border rounded px-3 py-2 bg-white" value={draft.ocupacion} onChange={(e) => setDraft((d) => ({ ...d, ocupacion: e.target.value }))} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-gray-700">Correo</span>
+                <input className="border rounded px-3 py-2 bg-white" value={draft.correo} onChange={(e) => setDraft((d) => ({ ...d, correo: e.target.value }))} inputMode="email" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-gray-700">Contraseña</span>
+                <input className="border rounded px-3 py-2 bg-white" value={passwd} onChange={(e) => setPasswd(e.target.value)} type="password" placeholder="••••••" />
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-sm text-gray-700">Foto de perfil</span>
+                <input className="border rounded px-3 py-2 bg-white" type="file" accept="image/*" onChange={onFile} />
+              </label>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button onClick={() => setShowConfig(false)} className="rounded-lg border px-3 py-1.5 bg-white">Cancelar</button>
+              <button onClick={() => { setProfile(draft); setShowConfig(false); }} className="rounded-lg border px-3 py-1.5 bg-[#0b1e3a] text-white">Guardar cambios</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
