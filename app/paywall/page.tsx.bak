@@ -1,0 +1,264 @@
+
+import MessagePaymentSection from "@/components/mp/MessagePaymentSection";
+
+const RAW_DEFAULT_AMOUNT = Number(
+  process.env.NEXT_PUBLIC_MP_ONE_TIME_AMOUNT ??
+    process.env.NEXT_PUBLIC_MP_PLAN_AMOUNT ??
+    "0"
+);
+
+const DEFAULT_PLAN_AMOUNT =
+  Number.isFinite(RAW_DEFAULT_AMOUNT) && RAW_DEFAULT_AMOUNT > 0
+    ? Math.floor(RAW_DEFAULT_AMOUNT)
+    : 200;
+
+const DEFAULT_CURRENCY = (
+  process.env.NEXT_PUBLIC_MP_CURRENCY_PREFIX || "UYU"
+).toUpperCase();
+
+const BENEFITS = [
+  {
+    title: "Acceso premium de por vida",
+    description:
+      "Pagás una sola vez y mantenés todas las funciones activas para siempre, sin suscripciones.",
+  },
+  {
+    title: "Exportaciones y reportes avanzados",
+    description:
+      "Descargá tus tableros en .xlsx cuantas veces quieras para compartir o respaldar tus datos.",
+  },
+  {
+    title: "Categorías y escenarios personalizados",
+    description:
+      "Creá etiquetas propias, multi-fonditos y múltiples estimaciones sin límites.",
+  },
+  {
+    title: "Soporte prioritario y mejoras continuas",
+    description:
+      "Accedé antes a nuevas funciones y recibí ayuda directa cuando la necesites.",
+  },
+];
+
+const STATUS_MICROCOPIES = [
+  {
+    key: "confirmed",
+    title: "Pago acreditado",
+    description: "Microcopy pendiente #1",
+  },
+  {
+    key: "processing",
+    title: "Procesando con Mercado Pago",
+    description: "Microcopy pendiente #2",
+  },
+  {
+    key: "pending",
+    title: "Pago pendiente",
+    description: "Microcopy pendiente #3",
+  },
+  {
+    key: "failure",
+    title: "Pago cancelado",
+    description: "Microcopy pendiente #4",
+  },
+];
+
+const COMPARISON_ROWS = [
+  {
+    feature: "Acceso completo",
+    free: "Limitado",
+    premium: "Ilimitado y de por vida",
+  },
+  {
+    feature: "Exportaciones .xlsx",
+    free: "Hasta 1 reporte",
+    premium: "Sin límites",
+  },
+  {
+    feature: "Categorías personalizadas",
+    free: "No disponibles",
+    premium: "Ilimitadas",
+  },
+  {
+    feature: "Estimaciones guardadas",
+    free: "Solo local",
+    premium: "En la nube",
+  },
+  {
+    feature: "Consejos inteligentes",
+    free: "Básicos",
+    premium: "Avanzados y priorizados",
+  },
+  {
+    feature: "Soporte",
+    free: "Autoasistido",
+    premium: "Prioritario",
+  },
+];
+
+export const dynamic = "force-dynamic";
+
+export default function PaywallPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const statusParam = normalizeStatus(searchParams?.status);
+  const statusMessage =
+    statusParam === "failure"
+      ? "El pago fue cancelado. Podés intentar nuevamente cuando quieras."
+      : statusParam === "pending"
+      ? "El pago qued? pendiente. Mercado Pago te avisará cuando se acredite."
+      : null;
+
+  const formattedPrice = `${DEFAULT_CURRENCY} ${DEFAULT_PLAN_AMOUNT.toLocaleString(
+    "es-UY"
+  )}`;
+
+  return (
+    <div className="mx-auto flex max-w-5xl flex-col gap-8 p-4">
+      <section className="space-y-4 rounded-2xl border border-white/60 bg-gradient-to-b from-sky-50 via-white to-white/70 p-8 text-gray-900 shadow-xl">
+        <div className="space-y-2">
+          <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+            Acceso premium de por vida
+          </span>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Comprá una vez, usalo para siempre
+          </h1>
+          <p className="max-w-xl text-sm text-gray-600">
+            Pagás un solo acceso y desbloqueás todas las funciones sin suscripciones, sin renovaciones y sin cobros automáticos.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="text-sm uppercase tracking-wider text-emerald-600">Pago único</div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-4xl font-bold text-gray-900">{formattedPrice}</span>
+            <span className="text-sm text-gray-500">una vez</span>
+          </div>
+          <p className="mt-3 text-sm text-gray-600">
+            Acceso premium inmediato. Volvé a tus herramientas en segundos después de completar el pago en Mercado Pago.
+          </p>
+        </div>
+
+        <ul className="grid gap-3 text-sm text-gray-700 sm:grid-cols-2">
+          {BENEFITS.map((benefit) => (
+            <li
+              key={benefit.title}
+              className="flex items-start gap-3 rounded-lg border border-slate-100 bg-white/70 p-3 shadow-sm"
+            >
+              <span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span>
+                <strong className="block text-sm text-gray-900">{benefit.title}</strong>
+                <span className="text-xs text-gray-600">{benefit.description}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {statusMessage ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            {statusMessage}
+          </p>
+        ) : null}
+
+        <p className="text-xs text-gray-500">
+          Pago seguro con Mercado Pago. Si tenés dudas o tu pago figura pendiente, podés escribirnos y revisar el estado desde tu cuenta de Mercado Pago.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Estados y microcopys listos</h2>
+          <p className="text-sm text-slate-600">
+            Tenés 4 espacios para definir los mensajes según el estado del pago. Editá los textos cuando los definas.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {STATUS_MICROCOPIES.map((item) => (
+            <article
+              key={item.key}
+              className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm"
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                {item.title}
+              </div>
+              <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Comparativa de planes</h2>
+            <p className="text-sm text-slate-600">
+              Tabla con 6 puntos listos para que completes tus diferencias entre la versión gratuita y la premium.
+            </p>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            6 filas disponibles
+          </span>
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3 text-left">Característica</th>
+                <th className="px-4 py-3 text-center">Gratis</th>
+                <th className="px-4 py-3 text-center">Premium</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {COMPARISON_ROWS.map((row) => (
+                <tr key={row.feature}>
+                  <td className="px-4 py-3 text-slate-900">{row.feature}</td>
+                  <td className="px-4 py-3 text-center text-slate-600">{row.free}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-emerald-700">
+                    {row.premium}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <MessagePaymentSection
+        title={null}
+        description={null}
+        collectMessage={false}
+        showHistory={false}
+        buttonLabel="Comprar acceso con Mercado Pago"
+        defaultMessage="Acceso premium desde paywall"
+        buttonClassName="rounded-xl bg-emerald-500 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/40 transition hover:bg-emerald-600"
+        showMpLogo
+        returnPath="/paywall"
+      />
+    </div>
+  );
+}
+
+function normalizeStatus(value: unknown): "failure" | "pending" | null {
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if (normalized === "failure" || normalized === "pending") {
+      return normalized;
+    }
+  }
+  return null;
+}

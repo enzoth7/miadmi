@@ -1,49 +1,87 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { supabaseBrowser } from "../../../lib/supabaseBrowser";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSessionInfo } from "../../../components/SessionProvider";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = supabaseBrowser();
+  const { user, loading: sessionLoading } = useSessionInfo();
 
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const modeParam = searchParams?.get("mode");
+  const redirectToParam = searchParams?.get("redirectTo");
+  const isValidRedirect =
+    typeof redirectToParam === "string" &&
+    redirectToParam.startsWith("/") &&
+    !redirectToParam.startsWith("//");
+  const redirectDestination = isValidRedirect ? redirectToParam : "/home";
+  const reasonParam = searchParams?.get("reason");
+  const timedOut = reasonParam === "timeout";
+  const initialMode = modeParam === "signup" ? "signup" : "login";
+  const [mode, setMode] = useState(initialMode); // "login" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    // Si ya hay sesión, vamos a /home
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) router.replace("/home");
-    })();
-  }, [router, supabase]);
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    setBusy(true);
-    setErr("");
-    try {
-      if (mode === "signup") {
-  const { error } = await supabase.auth.signUp({ email, password });
-  if (error) throw error;
-  await fetch("/api/profile/ensure", { method: "POST" });
-  router.replace("/home");
-} else {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  await fetch("/api/profile/ensure", { method: "POST" });
-  router.replace("/home");
-}
-    } catch (e) {
-      setErr(e?.message || "Error");
-    } finally {
-      setBusy(false);
+    if (modeParam === "signup" || modeParam === "login") {
+      setMode(modeParam);
     }
+  }, [modeParam]);
+
+  useEffect(() => {
+    if (!sessionLoading && user) {
+      router.replace(redirectDestination);
+    }
+  }, [sessionLoading, user, router, redirectDestination]);
+
+async function onSubmit(e) {
+  e.preventDefault();
+  setBusy(true);
+  setErr("");
+  try {
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+
+// Enviar email de bienvenida (server)
+const { data: sessionData } = await supabase.auth.getSession();
+const accessToken = sessionData?.session?.access_token;
+
+if (accessToken) {
+  await fetch("/api/email/welcome", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).catch(() => {});
+}
+
+
+
+      // Crea el perfil/base en Supabase
+      await fetch("/api/profile/ensure", { method: "POST" });
+
+      // NUEVO: siempre que es signup => vamos al onboarding
+      router.replace("/onboarding");
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      await fetch("/api/profile/ensure", { method: "POST" });
+
+      // Login normal respeta redirectTo o /home
+      router.replace(redirectDestination);
+    }
+  } catch (e) {
+    setErr(e?.message || "Error");
+  } finally {
+    setBusy(false);
   }
+}
+
 
   return (
     <div className="max-w-md mx-auto mt-10 rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
@@ -53,6 +91,12 @@ export default function LoginPage() {
       <p className="text-sm text-gray-600 mb-4">
         Usá tu email y una contraseña para {mode === "signup" ? "registrarte" : "entrar"}.
       </p>
+
+      {timedOut ? (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-700">
+          Tu sesión se cerró por inactividad. Volvé a ingresar para continuar.
+        </div>
+      ) : null}
 
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -117,5 +161,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

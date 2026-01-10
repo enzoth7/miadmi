@@ -2,25 +2,100 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  CalendarDays,
+  Download,
+  List as ListIcon,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { useSessionInfo } from "../../components/SessionProvider";
+import { triggerPremiumBlock } from "../../lib/premiumBlocker";
+import {
   getSupabaseSession,
   fetchControlMensual,
   saveControlMensual,
 } from "../../lib/app-data";
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  LS_CUSTOM_CATEGORIES,
+  normalizeKey,
+} from "../estimacion/especifica/constants";
+import { ControlMensualOnboardingTour } from "../../components/onboarding/ControlMensualOnboardingTour";
 
 const LS_CTRL = "miadmi:control_mensual";
 const LS_GEN = "miadmi:estimacion_general";
 const LS_ESP = "miadmi:estimacion_especifica";
 
+const normalizeCategoryKey = (value) => {
+  try {
+    return normalizeKey(String(value ?? ""));
+  } catch {
+    return String(value ?? "").toLowerCase().trim();
+  }
+};
+
+const formatCategoryLabel = (value) => {
+  const clean = String(value ?? "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return "";
+  return clean
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+const BASE_CATEGORY_LABELS = (() => {
+  const map = new Map();
+  const remember = (key, label) => {
+    const normalized = normalizeCategoryKey(key);
+    if (normalized && label) {
+      map.set(normalized, label);
+    }
+  };
+  [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].forEach((cat) => {
+    if (!cat) return;
+    const label = formatCategoryLabel(cat.label || cat.id);
+    remember(cat.id, label);
+    remember(cat.label, label);
+  });
+  return map;
+})();
+
 const n = (v) => {
   const x = Number(String(v ?? "").replace(",", "."));
   return Number.isFinite(x) ? x : 0;
 };
+
 const fmtUYU = (v) =>
   new Intl.NumberFormat("es-UY", {
     style: "currency",
     currency: "UYU",
     maximumFractionDigits: 0,
   }).format(v || 0);
+
+const rid = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : "id-" + Math.random().toString(36).slice(2, 10);
+
+const formatDateKey = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 const normalizeMovimientos = (arr) => {
   if (!Array.isArray(arr)) return [];
@@ -31,25 +106,47 @@ const normalizeMovimientos = (arr) => {
     desc: item?.desc ?? "",
     monto: item?.monto != null ? String(item.monto) : "",
     medio: item?.medio ?? "cash",
+    tipo: item?.tipo === "ingreso" ? "ingreso" : "egreso",
   }));
 };
-
 export default function ControlMensualPage() {
   const [inicialCash, setInicialCash] = useState("");
   const [inicialTarj, setInicialTarj] = useState("");
   const [actualCash, setActualCash] = useState("");
   const [actualTarj, setActualTarj] = useState("");
-  const [movs, setMovs] = useState([]); // {id, fecha, categoria, desc, monto, medio}
-
-  const [catsPlan, setCatsPlan] = useState([]);
+  const [movs, setMovs] = useState([]);
   const [session, setSession] = useState({ supabase: null, userId: null });
   const [loaded, setLoaded] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
+  const [expenseCats, setExpenseCats] = useState([]);
+  const [incomeCats, setIncomeCats] = useState([]);
+  const [categoryLabels, setCategoryLabels] = useState(() =>
+    Object.fromEntries(BASE_CATEGORY_LABELS)
+  );
+  const [filterText, setFilterText] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [sortKey, setSortKey] = useState("date-desc");
+  const [viewMode, setViewMode] = useState("list");
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const [showTour, setShowTour] = useState(false);
+
+  const { plan, premiumUntil } = useSessionInfo();
+  const isPremium =
+    plan === "premium" &&
+    (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
 
   const hydratingRef = useRef(false);
+  const resolveCategoryLabel = (value) => {
+    const normalized = normalizeCategoryKey(value);
+    if (normalized && categoryLabels[normalized]) {
+      return categoryLabels[normalized];
+    }
+    const formatted = formatCategoryLabel(value);
+    return formatted || "Otros";
+  };
 
   const ymNow = useMemo(() => {
     const d = new Date();
@@ -58,39 +155,145 @@ export default function ControlMensualPage() {
     return `${y}-${m}`;
   }, []);
 
-  // Cargar categorías desde Estimación General + Específica
+  const monthBounds = useMemo(() => {
+    const [yStr, mStr] = ymNow.split("-");
+    const y = Number(yStr);
+    const m = Number(mStr);
+    const first = new Date(y, m - 1, 1);
+    const last = new Date(y, m, 0);
+    return { first, last };
+  }, [ymNow]);
+
+  // CONTROL_MENSUAL: solo el mes actual es editable; clamped navigation mantiene fechas dentro del mes vigente
+  const clampToCurrentMonth = (date) => {
+    if (date < monthBounds.first) return monthBounds.first;
+    if (date > monthBounds.last) return monthBounds.last;
+    return date;
+  };
   useEffect(() => {
-    const out = new Set();
+    if (typeof window === "undefined") return;
+    const labels = new Map(BASE_CATEGORY_LABELS);
+    const rememberLabel = (value, label) => {
+      const normalized = normalizeCategoryKey(value);
+      if (normalized && label) {
+        labels.set(normalized, label);
+      }
+    };
+    const pushLabel = (value, target) => {
+      const label = formatCategoryLabel(value);
+      if (!label) return;
+      target.add(label);
+      rememberLabel(value, label);
+      rememberLabel(label, label);
+    };
+    const pushFromEntries = (list, target) => {
+      if (!Array.isArray(list)) return;
+      list.forEach((entry) => {
+        const rawName = entry?.nombre ?? entry?.label ?? entry?.id;
+        if (!rawName) return;
+        const label = formatCategoryLabel(rawName);
+        if (!label) return;
+        target.add(label);
+        if (entry?.id) rememberLabel(entry.id, label);
+        rememberLabel(label, label);
+      });
+    };
+    const pushFromObject = (source, target) => {
+      if (!source || typeof source !== "object") return;
+      Object.keys(source).forEach((key) => {
+        const normalized = normalizeCategoryKey(key);
+        const label =
+          (normalized && labels.get(normalized)) || formatCategoryLabel(key);
+        if (label) {
+          target.add(label);
+          rememberLabel(key, label);
+        }
+      });
+    };
+
+    const incomes = new Set();
+    const expenses = new Set();
+
+    try {
+      const rawCustom = localStorage.getItem(LS_CUSTOM_CATEGORIES);
+      if (rawCustom) {
+        const custom = JSON.parse(rawCustom);
+        pushFromEntries(custom?.ingresos, incomes);
+        pushFromEntries(custom?.egresos, expenses);
+      }
+    } catch {}
+
     try {
       const rawG = localStorage.getItem(LS_GEN);
       if (rawG) {
-        const g = JSON.parse(rawG);
-        const arr = Array.isArray(g?.egresos) ? g.egresos : [];
-        arr.forEach((e) => {
-          const name = String(e?.nombre || "").trim();
-          if (name) out.add(name);
+        const general = JSON.parse(rawG);
+        (Array.isArray(general?.ingresos) ? general.ingresos : []).forEach((entry) => {
+          pushLabel(entry?.nombre || "", incomes);
+        });
+        (Array.isArray(general?.egresos) ? general.egresos : []).forEach((entry) => {
+          pushLabel(entry?.nombre || "", expenses);
         });
       }
     } catch {}
+
     try {
       const rawE = localStorage.getItem(LS_ESP);
       if (rawE) {
-        const s = JSON.parse(rawE);
-        if (s?.egresos && typeof s.egresos === "object") {
-          Object.keys(s.egresos).forEach((k) => out.add(k));
-        }
+        const esp = JSON.parse(rawE);
+        pushFromObject(esp?.ingresos, incomes);
+        pushFromObject(esp?.egresos, expenses);
       }
     } catch {}
-    ["Préstamos", "Tarjetas", "Posibles compras"].forEach((k) => out.add(k));
-    setCatsPlan(Array.from(out).sort());
+
+    pushLabel("Préstamos", expenses);
+    pushLabel("Tarjetas", expenses);
+    pushLabel("Compras planificadas", expenses);
+
+    const sortLabels = (list) =>
+      Array.from(list).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+
+    setIncomeCats(sortLabels(incomes));
+    setExpenseCats(sortLabels(expenses));
+    setCategoryLabels(Object.fromEntries(labels));
   }, []);
 
-  // Cargar estado de control mensual
+  useEffect(() => {
+    if (!movs.length) return;
+    setMovs((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        const label = resolveCategoryLabel(item?.categoria || "");
+        if (!label || label === item.categoria) {
+          return item;
+        }
+        changed = true;
+        return { ...item, categoria: label };
+      });
+      return changed ? next : prev;
+    });
+  }, [categoryLabels, movs]);
   useEffect(() => {
     let active = true;
 
     const hydrate = async () => {
       hydratingRef.current = true;
+      let cachedSnapshot = null;
+      let cachedMovements = [];
+      const cachedTypes = new Map();
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem(LS_CTRL);
+          if (raw) {
+            cachedSnapshot = JSON.parse(raw);
+            cachedMovements = normalizeMovimientos(cachedSnapshot?.movimientos ?? []);
+            cachedMovements.forEach((item) => {
+              if (item?.id) {
+                cachedTypes.set(item.id, item.tipo);
+              }
+            });
+          }
+        } catch {}
+      }
       const ctx = await getSupabaseSession();
       if (!active) return;
       setSession(ctx);
@@ -105,7 +308,16 @@ export default function ControlMensualPage() {
             setInicialTarj(String(remote.inicial?.tarjetas ?? ""));
             setActualCash(String(remote.actual?.cash ?? ""));
             setActualTarj(String(remote.actual?.tarjetas ?? ""));
-            const normalized = normalizeMovimientos(remote.movimientos ?? []);
+            let normalized = normalizeMovimientos(remote.movimientos ?? []);
+            if (cachedTypes.size) {
+              normalized = normalized.map((mov) => {
+                const savedType = cachedTypes.get(mov.id);
+                if (savedType && savedType !== mov.tipo) {
+                  return { ...mov, tipo: savedType };
+                }
+                return mov;
+              });
+            }
             setMovs(normalized);
             try {
               localStorage.setItem(
@@ -119,23 +331,15 @@ export default function ControlMensualPage() {
             } catch {}
             synced = true;
           }
-        } catch {
-          // ignore fallback
-        }
+        } catch {}
       }
 
-      if (!synced) {
-        try {
-          const raw = localStorage.getItem(LS_CTRL);
-          if (raw) {
-            const s = JSON.parse(raw);
-            setInicialCash(String(s?.inicial?.cash ?? ""));
-            setInicialTarj(String(s?.inicial?.tarjetas ?? ""));
-            setActualCash(String(s?.actual?.cash ?? ""));
-            setActualTarj(String(s?.actual?.tarjetas ?? ""));
-            setMovs(normalizeMovimientos(s?.movimientos ?? []));
-          }
-        } catch {}
+      if (!synced && cachedSnapshot) {
+        setInicialCash(String(cachedSnapshot?.inicial?.cash ?? ""));
+        setInicialTarj(String(cachedSnapshot?.inicial?.tarjetas ?? ""));
+        setActualCash(String(cachedSnapshot?.actual?.cash ?? ""));
+        setActualTarj(String(cachedSnapshot?.actual?.tarjetas ?? ""));
+        setMovs(cachedMovements);
       }
 
       if (active) {
@@ -146,7 +350,6 @@ export default function ControlMensualPage() {
     };
 
     hydrate();
-
     return () => {
       active = false;
       hydratingRef.current = false;
@@ -154,16 +357,22 @@ export default function ControlMensualPage() {
   }, []);
 
   const buildSnapshot = () => ({
-    inicial: { cash: String(inicialCash ?? ""), tarjetas: String(inicialTarj ?? "") },
-    actual: { cash: String(actualCash ?? ""), tarjetas: String(actualTarj ?? "") },
+    inicial: {
+      cash: String(inicialCash ?? ""),
+      tarjetas: String(inicialTarj ?? ""),
+    },
+    actual: {
+      cash: String(actualCash ?? ""),
+      tarjetas: String(actualTarj ?? ""),
+    },
     movimientos: normalizeMovimientos(movs),
   });
 
   const markDirty = () => {
     if (!hydratingRef.current) {
       setDirty(true);
-      setSaveSuccess("");
       setSaveError("");
+      setSaveSuccess("");
     }
   };
 
@@ -172,6 +381,29 @@ export default function ControlMensualPage() {
     const timer = setTimeout(() => setSaveSuccess(""), 2500);
     return () => clearTimeout(timer);
   }, [saveSuccess]);
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const key = "miadmi:tour-control-mensual";
+
+  try {
+    const stored = window.localStorage.getItem(key);
+
+    if (!stored) {
+      // primera vez que entra
+      window.localStorage.setItem(key, "pending");
+    }
+
+    if (window.localStorage.getItem(key) === "pending") {
+      setShowTour(true);
+      window.localStorage.setItem(key, "done");
+    }
+  } catch {
+    // ignore storage issues
+  }
+}, []);
+
 
   const handleSave = async () => {
     if (!session.userId || !session.supabase) {
@@ -186,11 +418,9 @@ export default function ControlMensualPage() {
       await saveControlMensual(session.supabase, session.userId, snapshot);
       try {
         localStorage.setItem(LS_CTRL, JSON.stringify(snapshot));
-      } catch {
-        // ignore
-      }
+      } catch {}
       setDirty(false);
-      setSaveSuccess("Cambios guardados");
+      setSaveSuccess("Cambios guardados.");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("miadmi:data-updated"));
       }
@@ -205,7 +435,6 @@ export default function ControlMensualPage() {
 
   const canSave = dirty && !saving && !!session.userId;
 
-  // Guardar cache local
   useEffect(() => {
     if (!loaded) return;
     const snapshot = buildSnapshot();
@@ -213,237 +442,516 @@ export default function ControlMensualPage() {
       localStorage.setItem(LS_CTRL, JSON.stringify(snapshot));
     } catch {}
   }, [loaded, inicialCash, inicialTarj, actualCash, actualTarj, movs]);
-
-  // Filtrar movimientos del mes actual
-  const movsMes = useMemo(() => {
-    return movs.filter((m) => String(m?.fecha || "").startsWith(ymNow));
-  }, [movs, ymNow]);
-
-  // Totales
-  const totalCash = useMemo(
-    () => movsMes.reduce((a, m) => a + (String(m?.medio) === "cash" ? n(m?.monto) : 0), 0),
-    [movsMes]
-  );
-  const totalTarj = useMemo(
-    () => movsMes.reduce((a, m) => a + (String(m?.medio) === "tarjeta" ? n(m?.monto) : 0), 0),
-    [movsMes]
+  // CONTROL_MENSUAL: solo se trabaja sobre el mes actual; filtramos los movimientos al ymNow vigente
+  const movsMes = useMemo(
+    () => movs.filter((m) => String(m?.fecha || "").startsWith(ymNow)),
+    [movs, ymNow]
   );
 
-  const esperadoCash = Math.max(0, n(inicialCash) - totalCash);
-  const esperadoTarj = Math.max(0, n(inicialTarj) - totalTarj);
-  const difCash = n(actualCash) - esperadoCash;
-  const difTarj = n(actualTarj) - esperadoTarj;
-
-  // KPI total: compara lo que se tiene (cash+tarjetas) vs movimientos (cash+tarjetas) del mes
-  const totalMovs = totalCash + totalTarj;
+  const totalMovs = useMemo(
+    () => movsMes.reduce((acc, m) => acc + n(m?.monto), 0),
+    [movsMes]
+  );
   const totalActual = n(actualCash) + n(actualTarj);
-  const kpiDiff = totalActual - totalMovs;
-  const kpiColor = kpiDiff === 0 ? "emerald" : kpiDiff < 0 ? "rose" : "amber";
-  const kpiClasses = [
-    "rounded-xl p-4 md:p-5 border shadow-sm flex items-center justify-between gap-4",
-    kpiColor === "emerald" && "border-emerald-200 bg-emerald-50",
-    kpiColor === "rose" && "border-rose-200 bg-rose-50",
-    kpiColor === "amber" && "border-amber-200 bg-amber-50",
-  ].filter(Boolean).join(" ");
+  const totalReal = totalActual;
+  const totalIngresado = totalMovs;
+  const diferencia = totalReal - totalIngresado;
+  const differenceMessage =
+    diferencia > 0
+      ? "TE SOBRA PLATA. Te faltó agregar un movimiento tal vez."
+      : diferencia < 0
+      ? "TE FALTA PLATA. Te faltó agregar un movimiento tal vez."
+      : "Conciliado.";
 
-  const catTotals = useMemo(() => {
+  const chartData = useMemo(() => {
     const map = new Map();
-    for (const m of movsMes) {
-      const k = String(m?.categoria || "Otros").trim() || "Otros";
-      map.set(k, (map.get(k) || 0) + n(m?.monto));
-    }
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    movsMes.forEach((m) => {
+      const key = String(m?.categoria || "Otros").trim() || "Otros";
+      if (!map.has(key))
+        map.set(key, { categoria: key, ingresos: 0, egresos: 0 });
+      const target = map.get(key);
+      if (m.tipo === "ingreso") target.ingresos += n(m.monto);
+      else target.egresos += Math.abs(n(m.monto));
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => b.egresos + b.ingresos - (a.egresos + a.ingresos)
+    );
   }, [movsMes]);
 
-  // Handlers
+  const filteredMovs = useMemo(() => {
+    const query = filterText.trim().toLowerCase();
+    return movsMes
+      .filter((m) => {
+        if (filterType !== "all" && m.tipo !== filterType) return false;
+        if (query) {
+          const haystack = `${m.categoria} ${m.desc}`.toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortKey === "amount-desc") return n(b.monto) - n(a.monto);
+        if (sortKey === "amount-asc") return n(a.monto) - n(b.monto);
+        if (sortKey === "date-asc") return a.fecha.localeCompare(b.fecha);
+        return b.fecha.localeCompare(a.fecha);
+      });
+  }, [movsMes, filterType, filterText, sortKey]);
+
+  const getCategoryOptions = (tipo) =>
+    tipo === "ingreso"
+      ? incomeCats.length
+        ? incomeCats
+        : ["Ingresos"]
+      : expenseCats.length
+      ? expenseCats
+      : ["Otros"];
+
   const addMovimiento = () => {
     const today = new Date();
-    const d = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-      today.getDate()
-    ).padStart(2, "0")}`;
+    const d = formatDateKey(today);
     setMovs((prev) => [
       ...prev,
-      { id: rid(), fecha: d, categoria: catsPlan[0] || "Otros", desc: "", monto: "", medio: "cash" },
+      {
+        id: rid(),
+        fecha: d,
+        categoria: getCategoryOptions("egreso")[0] || "Otros",
+        desc: "",
+        monto: "",
+        medio: "cash",
+        tipo: "egreso",
+      },
     ]);
     markDirty();
   };
+
   const updMov = (id, patch) => {
-    setMovs((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+    setMovs((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        const next = { ...m, ...patch };
+        if (patch.tipo) {
+          const options = getCategoryOptions(patch.tipo);
+          if (!options.includes(next.categoria)) {
+            next.categoria = options[0] || "Otros";
+          }
+        }
+        return next;
+      })
+    );
     markDirty();
   };
+
   const remMov = (id) => {
     setMovs((prev) => prev.filter((m) => m.id !== id));
     markDirty();
   };
 
+  const handleExportCsv = () => {
+    if (typeof window === "undefined") return;
+    if (!isPremium) {
+      triggerPremiumBlock("export");
+      return;
+    }
+    const rows = [
+      ["Fecha", "Tipo", "Categoría", "Descripción", "Monto"],
+      ...filteredMovs.map((m) => [
+        m.fecha,
+        m.tipo,
+        m.categoria,
+        m.desc || "",
+        m.monto,
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row
+          .map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `control-mensual-${ymNow}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const calendarPrev = () => {
+    setCalendarDate((prev) => {
+      const next = new Date(prev);
+      next.setDate(prev.getDate() - 1);
+      return clampToCurrentMonth(next);
+    });
+  };
+
+  const calendarNext = () => {
+    setCalendarDate((prev) => {
+      const next = new Date(prev);
+      next.setDate(prev.getDate() + 1);
+      return clampToCurrentMonth(next);
+    });
+  };
+
+  const calendarDateKey = formatDateKey(calendarDate);
+  const calendarMovs = filteredMovs.filter((m) => m.fecha === calendarDateKey);
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-2xl md:text-3xl font-semibold text-white">Control mensual</h1>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold text-white md:text-3xl">
+          Control mensual
+        </h1>
         <p className="text-white/80">
-          Registra tus gastos día a día por categoría y conciliá efectivo y tarjetas.
+          Conciliá efectivo y tarjetas, visualiza tus categorías y compara contra tu
+          estimación.
         </p>
       </header>
 
-      {/* KPI Conciliación global */}
-      <section className="rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
-        <div className={kpiClasses}>
+      <section
+        id="control-conciliacion-card"
+        className="rounded-2xl border border-slate-100 bg-white/90 p-5 text-slate-900 shadow-sm"
+      >
+        <h2 className="text-lg font-semibold md:text-xl">Conciliación</h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-600">Dinero en efectivo</p>
+              <input
+                className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-right text-base font-semibold outline-none focus:border-slate-400"
+                value={actualCash}
+                onChange={(e) => {
+                  setActualCash(e.target.value);
+                  markDirty(); // CONTROL_MENSUAL: cambios en conciliación marcan dirty para habilitar "Guardar cambios"
+                }}
+                inputMode="decimal"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-600">Dinero en tarjeta</p>
+              <input
+                className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-right text-base font-semibold outline-none focus:border-slate-400"
+                value={actualTarj}
+                onChange={(e) => {
+                  setActualTarj(e.target.value);
+                  markDirty();
+                }}
+                inputMode="decimal"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between text-sm text-slate-600">
+              <span>Total dinero en REALIDAD</span>
+              <strong className="text-slate-900">{fmtUYU(totalReal)}</strong>
+            </div>
+            <div className="flex items-center justify-between text-sm text-slate-600">
+              <span>Total dinero según ESTIMACIÓN Y MOVIMIENTOS</span>
+              <strong className="text-slate-900">{fmtUYU(totalIngresado)}</strong>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Diferencia</span>
+              <strong className={diferencia >= 0 ? "text-emerald-700" : "text-rose-700"}>
+                {fmtUYU(diferencia)}
+              </strong>
+            </div>
+            <p className="text-sm font-semibold text-slate-700">{differenceMessage}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-100 bg-white/90 p-5 text-slate-900 shadow-sm">
+        <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-gray-600">Conciliación total (cash + tarjetas)</div>
-            <div className={["text-2xl font-semibold", kpiColor === "emerald" ? "text-emerald-700" : kpiColor === "rose" ? "text-rose-700" : "text-amber-700"].join(" ")}>{fmtUYU(kpiDiff)}</div>
-            <div className="text-xs text-gray-600 mt-1">Lo que tenés: {fmtUYU(totalActual)} · Movimientos: {fmtUYU(totalMovs)}</div>
-            {kpiColor === "amber" ? (
-              <div className="text-sm text-amber-700 mt-1">Te faltó agregar un movimiento o te <b>SOBRA PLATA</b></div>
-            ) : kpiColor === "rose" ? (
-              <div className="text-sm text-rose-700 mt-1">Te faltó agregar un movimiento o te <b>FALTA PLATA</b></div>
+            <h2 className="text-lg font-semibold md:text-xl">Categorías del mes</h2>
+            <p className="text-sm text-slate-500">{ymNow}</p>
+          </div>
+        </div>
+        <div className="mt-4 h-72 w-full">
+          {chartData.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              Aún no hay movimientos este mes.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ left: 0, right: 40 }}>
+                <XAxis dataKey="categoria" />
+                <YAxis />
+                <Tooltip />
+                <Legend layout="vertical" align="right" verticalAlign="middle" />
+                <Bar dataKey="egresos" stackId="a" fill="#fb7185" name="Egresos" />
+                <Bar dataKey="ingresos" stackId="a" fill="#34d399" name="Ingresos" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </section>
+
+      <section
+        id="control-movimientos-card"
+        className="space-y-4 rounded-2xl border border-slate-100 bg-white/90 p-5 text-slate-900 shadow-sm"
+      >
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold md:text-xl">Movimientos ({ymNow})</h2>
+            <p className="text-sm text-slate-500">Registra ingresos y egresos.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={addMovimiento}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Agregar
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={[
+                "inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold",
+                viewMode === "list"
+                  ? "border-slate-500 bg-slate-100 text-slate-900"
+                  : "border-slate-200 bg-white text-slate-600",
+              ].join(" ")}
+            >
+              <ListIcon className="h-4 w-4" />
+              Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("calendar")}
+              className={[
+                "inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold",
+                viewMode === "calendar"
+                  ? "border-slate-500 bg-slate-100 text-slate-900"
+                  : "border-slate-200 bg-white text-slate-600",
+              ].join(" ")}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Calendario
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className={[
+                "inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold transition",
+                isPremium
+                  ? "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"
+                  : "cursor-not-allowed border-white/20 bg-white/10 text-white/60 backdrop-blur",
+              ].join(" ")}
+              aria-disabled={!isPremium}
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <input
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+            placeholder="Buscar por categoría o descripción..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+          <select
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="all">Todos los tipos</option>
+            <option value="ingreso">Ingresos</option>
+            <option value="egreso">Egresos</option>
+          </select>
+          <select
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value)}
+          >
+            <option value="date-desc">Más recientes</option>
+            <option value="date-asc">Más antiguos</option>
+            <option value="amount-desc">Monto (descendente)</option>
+            <option value="amount-asc">Monto (ascendente)</option>
+          </select>
+        </div>
+
+        {viewMode === "calendar" ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={calendarPrev}
+                className="rounded-full border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="text-center">
+                <p className="text-sm text-slate-500">Movimientos del día</p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {calendarDateKey}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={calendarNext}
+                className="rounded-full border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+            {calendarMovs.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No hay movimientos registrados en este día.
+              </p>
+            ) : (
+              <ul className="space-y-3 text-sm">
+                {calendarMovs.map((m) => (
+                  <li
+                    key={m.id}
+                    className="rounded-lg border border-slate-100 bg-slate-50 p-3"
+                  >
+                    <p className="text-xs text-slate-500">{m.tipo.toUpperCase()}</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {m.categoria}
+                    </p>
+                    {m.desc ? (
+                      <p className="text-xs text-slate-500">{m.desc}</p>
+                    ) : null}
+                    <p
+                      className={[
+                        "mt-2 text-right text-base font-semibold",
+                        m.tipo === "ingreso" ? "text-emerald-700" : "text-rose-700",
+                      ].join(" ")}
+                    >
+                      {fmtUYU(n(m.monto))}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 text-left">Fecha</th>
+                  <th className="px-3 py-2 text-left">Tipo</th>
+                  <th className="px-3 py-2 text-left">Categoría</th>
+                  <th className="px-3 py-2 text-left">Descripción</th>
+                  <th className="px-3 py-2 text-right">Monto</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredMovs.map((m) => (
+                  <tr key={m.id} className="hover:bg-slate-50/70">
+                    <td className="px-3 py-2">
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-transparent px-1 py-1 text-sm outline-none focus:border-slate-300"
+                        value={m.fecha}
+                        onChange={(e) =>
+                          updMov(m.id, { fecha: e.target.value || "" })
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        className="w-full rounded-lg border border-transparent px-2 py-1 text-sm outline-none focus:border-slate-300"
+                        value={m.tipo}
+                        onChange={(e) =>
+                          updMov(m.id, { tipo: e.target.value || "egreso" })
+                        }
+                      >
+                        <option value="egreso">Egreso</option>
+                        <option value="ingreso">Ingreso</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        className="w-full rounded-lg border border-transparent px-2 py-1 text-sm outline-none focus:border-slate-300"
+                        value={m.categoria}
+                        onChange={(e) => updMov(m.id, { categoria: e.target.value })}
+                      >
+                        {getCategoryOptions(m.tipo).map((cat) => (
+                          <option key={`${m.id}-${cat}`} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        className="w-full rounded-lg border border-transparent px-2 py-1 text-sm outline-none focus:border-slate-300"
+                        value={m.desc || ""}
+                        onChange={(e) => updMov(m.id, { desc: e.target.value })}
+                        placeholder="Detalle (opcional)"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input
+                        className="w-full rounded-lg border border-transparent px-2 py-1 text-right text-sm outline-none focus:border-slate-300"
+                        value={m.monto}
+                        onChange={(e) => updMov(m.id, { monto: e.target.value })}
+                        inputMode="decimal"
+                        placeholder="0"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => remMov(m.id)}
+                        className="text-sm font-semibold text-rose-600 hover:text-rose-700"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredMovs.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-slate-500">
+                No hay movimientos que coincidan con los filtros seleccionados.
+              </p>
             ) : null}
           </div>
-        </div>
-      </section>
-
-      {/* Conciliación */}
-      <section className="rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
-        <h2 className="text-lg md:text-xl font-semibold mb-4">Conciliación</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded-lg border bg-white p-3">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">CASH</div>
-              <div className="text-sm text-gray-600">Gastos: {fmtUYU(totalCash)}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <label className="text-sm text-gray-600">Saldo inicial</label>
-              <input className="text-right bg-transparent border-b" value={inicialCash} onChange={(e) => setInicialCash(e.target.value)} inputMode="decimal" placeholder="0" />
-              <label className="text-sm text-gray-600">Saldo actual</label>
-              <input className="text-right bg-transparent border-b" value={actualCash} onChange={(e) => setActualCash(e.target.value)} inputMode="decimal" placeholder="0" />
-            </div>
-            <div className="mt-2 text-sm">Debería ser: <b>{fmtUYU(esperadoCash)}</b></div>
-            <div className={["text-sm", difCash === 0 ? "text-gray-700" : difCash > 0 ? "text-emerald-700" : "text-rose-700"].join(" ")}>Diferencia: {fmtUYU(difCash)}</div>
-          </div>
-
-          <div className="rounded-lg border bg-white p-3">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">TARJETAS</div>
-              <div className="text-sm text-gray-600">Gastos: {fmtUYU(totalTarj)}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <label className="text-sm text-gray-600">Saldo inicial</label>
-              <input className="text-right bg-transparent border-b" value={inicialTarj} onChange={(e) => setInicialTarj(e.target.value)} inputMode="decimal" placeholder="0" />
-              <label className="text-sm text-gray-600">Saldo actual</label>
-              <input className="text-right bg-transparent border-b" value={actualTarj} onChange={(e) => setActualTarj(e.target.value)} inputMode="decimal" placeholder="0" />
-            </div>
-            <div className="mt-2 text-sm">Debería ser: <b>{fmtUYU(esperadoTarj)}</b></div>
-            <div className={["text-sm", difTarj === 0 ? "text-gray-700" : difTarj > 0 ? "text-emerald-700" : "text-rose-700"].join(" ")}>Diferencia: {fmtUYU(difTarj)}</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Registro de movimientos */}
-      <section className="rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg md:text-xl font-semibold">Movimientos ({ymNow})</h2>
-          <button type="button" onClick={addMovimiento} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 bg-white hover:bg-gray-50">
-            Agregar
-          </button>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border bg-white">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-700">
-              <tr>
-                <th className="px-3 py-2 text-left">Fecha</th>
-                <th className="px-3 py-2 text-left">Categoría</th>
-                <th className="px-3 py-2 text-left">Descripción</th>
-                <th className="px-3 py-2 text-right">Monto</th>
-                <th className="px-3 py-2 text-left">Medio</th>
-                <th className="px-3 py-2 w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {movsMes.map((m) => (
-                <tr key={m.id} className="hover:bg-gray-50/60">
-                  <td className="px-3 py-2">
-                    <input type="date" className="bg-transparent outline-none" value={m.fecha} onChange={(e) => updMov(m.id, { fecha: e.target.value })} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <select className="bg-transparent outline-none" value={m.categoria} onChange={(e) => updMov(m.id, { categoria: e.target.value })}>
-                      {[m.categoria, ...catsPlan.filter((c) => c !== m.categoria)].map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <input className="w-full bg-transparent outline-none" value={m.desc || ""} onChange={(e) => updMov(m.id, { desc: e.target.value })} placeholder="Detalle (opcional)" />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <input className="w-full text-right bg-transparent outline-none" value={m.monto} onChange={(e) => updMov(m.id, { monto: e.target.value })} inputMode="decimal" placeholder="0" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <select className="bg-transparent outline-none" value={m.medio} onChange={(e) => updMov(m.id, { medio: e.target.value })}>
-                      <option value="cash">Cash</option>
-                      <option value="tarjeta">Tarjeta</option>
-                    </select>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button type="button" onClick={() => remMov(m.id)} className="text-rose-600 hover:text-rose-700">Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Totales por categoría */}
-      <section className="rounded-2xl p-6 bg-sky-50 text-gray-900 shadow border border-white/70">
-        <h2 className="text-lg md:text-xl font-semibold mb-3">Totales por categoría ({ymNow})</h2>
-        {catTotals.length === 0 ? (
-          <p className="text-sm text-gray-700">Aún no registraste movimientos este mes.</p>
-        ) : (
-          <ul className="space-y-2">
-            {catTotals.map((d, i) => (
-              <li key={d.name + i} className="flex items-center justify-between rounded-lg border bg-white p-3 shadow-sm">
-                <span className="text-sm">{d.name}</span>
-                <span className="text-sm font-semibold">{fmtUYU(d.value)}</span>
-              </li>
-            ))}
-          </ul>
         )}
       </section>
 
-      <div className="sticky bottom-0 left-0 right-0 mt-6 flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-slate-600">
-          {!session.userId
-            ? "Inicia sesión para guardar tus cambios en la nube."
+      <div className="sticky bottom-0 left-0 right-0 mt-4 flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          {!loaded
+            ? "Cargando datos..."
             : dirty
             ? "Tienes cambios sin guardar."
-            : saveSuccess
-            ? saveSuccess
-            : "Últimos cambios guardados."}
-          {saveError ? (
-            <span className="ml-2 text-rose-600">{saveError}</span>
-          ) : null}
+            : saveSuccess || "Últimos cambios guardados."}
+          {saveError ? <span className="ml-2 text-rose-600">{saveError}</span> : null}
         </div>
         <button
           type="button"
           onClick={handleSave}
           disabled={!canSave}
           className={[
-            "inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+            "inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold",
             canSave
               ? "bg-emerald-500 text-white hover:bg-emerald-600"
-              : "bg-slate-300 text-slate-600 cursor-not-allowed",
+              : "cursor-not-allowed bg-slate-300 text-slate-600",
           ].join(" ")}
         >
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
+      {showTour ? (
+        <ControlMensualOnboardingTour onClose={() => setShowTour(false)} />
+      ) : null}
     </div>
   );
 }
 
-function rid() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return "id-" + Math.random().toString(36).slice(2, 10);
-}

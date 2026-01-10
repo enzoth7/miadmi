@@ -1,0 +1,113 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import Header from "./Header";
+import FooterBanner from "./FooterBanner";
+import BottomNav from "./BottomNav";
+import PremiumBlocker from "./PremiumBlocker";
+import BrandLogo from "./BrandLogo";
+import { useSessionInfo } from "./SessionProvider";
+import InactivityGuard from "./InactivityGuard";
+
+const PUBLIC_ROUTE_PREFIXES = [
+  "/",
+  "/login",
+  "/como-funciona",
+  "/sobre-nosotros",
+  "/contacto",
+  "/reembolsos",
+  "/terminos-condiciones",
+  "/politica-de-privacidad",
+  "/status",
+  "/aviso-legal",
+  "/cookies",
+  "/faq",
+  "/pagos-mensaje",
+  "/bloqueos",
+];
+
+function isPublicRoute(pathname) {
+  return PUBLIC_ROUTE_PREFIXES.some((publicPath) => {
+    if (publicPath === "/") {
+      return pathname === "/";
+    }
+    return pathname === publicPath || pathname.startsWith(`${publicPath}/`);
+  });
+}
+
+export default function AppChrome({ children }) {
+  const pathname = usePathname() || "/";
+  const searchParams = useSearchParams();
+  const { user } = useSessionInfo();
+  const isLanding = pathname === "/";
+  const isPublic = isPublicRoute(pathname);
+  const showInternalChrome = Boolean(user) && (!isPublic || isLanding);
+  const shouldMountInactivityGuard = Boolean(user) && !isPublic;
+
+  const currentPath = useMemo(() => {
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
+
+  const headerShellClass =
+    "sticky top-0 z-30 border-b border-white/10 bg-[#0b1e3a]/90 backdrop-blur";
+
+  const publicHeader = (
+    <div className={headerShellClass}>
+      <div className="px-4 py-4 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+          <BrandLogo />
+          <div className="flex items-center gap-3 text-sm font-semibold text-white">
+            <Link
+              href="/login?mode=login"
+              className="text-white/80 transition hover:text-white"
+            >
+              Iniciar sesión
+            </Link>
+            <Link
+              href="/login?mode=signup"
+              className="rounded-full bg-white px-4 py-1.5 text-gray-900 shadow transition hover:bg-white/90"
+            >
+              Crear cuenta
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const privateHeader = (
+    <div className={headerShellClass}>
+      <div className="px-4 py-4 lg:px-8">
+        <Header />
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="flex min-h-screen flex-col bg-[#0b1e3a]">
+        {showInternalChrome ? privateHeader : isPublic ? publicHeader : null}
+        <main className={isLanding ? "flex-1" : "flex-1 px-4 py-6 lg:px-8"}>
+          <div className={isLanding ? "" : "mx-auto w-full max-w-5xl"}>
+            {children}
+          </div>
+        </main>
+        <FooterBanner />
+      </div>
+      {showInternalChrome ? (
+        <>
+          <div className="lg:hidden">
+            <BottomNav />
+          </div>
+          <PremiumBlocker />
+        </>
+      ) : null}
+      {shouldMountInactivityGuard ? (
+        <InactivityGuard currentPath={currentPath} />
+      ) : null}
+    </>
+  );
+}

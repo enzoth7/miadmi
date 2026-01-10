@@ -51,6 +51,7 @@ export async function middleware(req: NextRequest) {
   if (!session) {
     // sin sesión → a /login
     const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("mode", "login");
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }

@@ -1,0 +1,176 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import PremiumBadge from "./PremiumBadge";
+import { useSessionInfo } from "./SessionProvider";
+import { supabaseBrowser } from "../lib/supabaseBrowser";
+import BrandLogo from "./BrandLogo";
+
+export default function Header() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, loading, plan, premiumUntil, refresh } = useSessionInfo();
+
+  const isPremium =
+    plan === "premium" &&
+    (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
+
+  async function handleSignOut() {
+    try {
+      const supabase = supabaseBrowser();
+      await supabase.auth.signOut();
+      await fetch("/api/signout", { method: "POST" });
+      await refresh();
+      router.push("/login?mode=login");
+    } catch (err) {
+      console.error("Sign out failed", err);
+    }
+  }
+
+  const paywallMenuItem = {
+    href: "/paywall",
+    label: "Suscripciones",
+  }; // Abre el paywall
+
+  const navItems = [
+    { id: "home", href: "/home", label: "Inicio" },
+    {
+      id: "estimacion-general",
+      href: "/estimacion-general",
+      label: "Estimacion general",
+    },
+    {
+      id: "estimacion-especifica",
+      href: "/estimacion-especifica",
+      label: "Estimacion especifica",
+      menu: [{ href: "/egresos-estimables", label: "Egresos estimables" }],
+    },
+    {
+      id: "control-mensual",
+      href: "/control-mensual",
+      label: "Control mensual",
+    },
+    {
+      id: "objetivos-logros",
+      href: "/objetivos-logros",
+      label: "Objetivos y logros",
+    },
+    {
+      id: "perfil",
+      href: "/perfil",
+      label: "Perfil",
+      menu: user
+        ? [paywallMenuItem, { label: "Cerrar sesion", action: handleSignOut }]
+        : [paywallMenuItem, { href: "/login?mode=login", label: "Iniciar sesion" }],
+    },
+  ];
+
+  const isActive = (item) => {
+    if (item.href && pathname?.startsWith(item.href)) return true;
+    return item.menu?.some(
+      (child) => child.href && pathname?.startsWith(child.href)
+    );
+  };
+
+  const navLinkBase =
+    "inline-flex items-center border-b-2 border-transparent px-3 py-2 text-sm font-semibold uppercase tracking-wide transition";
+
+  const renderDropdownItem = (child, index) => {
+    const baseClass = [
+      "block w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition",
+      child.primary ? "bg-white/5 text-white" : "text-white/80 hover:bg-white/10",
+    ].join(" ");
+
+    if (child.action) {
+      return (
+        <button
+          key={`action-${index}`}
+          type="button"
+          onClick={child.action}
+          className={baseClass}
+        >
+          {child.label}
+        </button>
+      );
+    }
+
+    return (
+      <Link key={child.href ?? index} href={child.href ?? "#"} className={baseClass}>
+        {child.label}
+      </Link>
+    );
+  };
+
+  return (
+    <header className="py-4">
+      <div className="flex flex-wrap items-center justify-center gap-4 lg:flex-nowrap">
+        <div className="flex items-center gap-3">
+          <BrandLogo />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <PremiumBadge />
+          {!loading && user && !isPremium ? (
+            <Link
+              href="/paywall"
+              className="inline-flex items-center rounded-full border border-emerald-400/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 transition hover:border-emerald-200 hover:text-emerald-50"
+            >
+              Mejorar
+            </Link>
+          ) : null}
+        </div>
+
+        <nav className="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-6 text-sm font-semibold text-white/80 lg:justify-end lg:pl-8">
+          {navItems.map((item) => {
+            if (item.menu?.length) {
+              const dropdownItems = [
+                { href: item.href, label: item.label, primary: true },
+                ...item.menu,
+              ];
+              return (
+                <div key={item.id} className="group relative">
+                  <button
+                    type="button"
+                    aria-haspopup="true"
+                    className={[
+                      navLinkBase,
+                      isActive(item)
+                        ? "border-white/80 text-white"
+                        : "text-white/70 hover:border-white/40 hover:text-white",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </button>
+                  <div className="invisible absolute left-1/2 top-full z-20 w-60 -translate-x-1/2 opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                    <div className="mt-1 rounded-2xl border border-white/10 bg-[#080f1d] p-2 shadow-2xl shadow-black/30 backdrop-blur">
+                      {dropdownItems.map((child, index) =>
+                        renderDropdownItem(child, index)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={[
+                  navLinkBase,
+                  isActive(item)
+                    ? "border-white/80 text-white"
+                    : "text-white/70 hover:border-white/40 hover:text-white",
+                ].join(" ")}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+      </div>
+    </header>
+  );
+}

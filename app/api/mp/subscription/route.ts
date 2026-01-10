@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     const { reason: requestedReason } = (await req.json().catch(() => ({}))) as Body
 
-    const amount = Number(process.env.MP_PLAN_AMOUNT ?? 15)
+const amount = Number(process.env.MP_PLAN_AMOUNT ?? process.env.MP_MESSAGE_AMOUNT ?? '250')
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: 'Invalid plan amount' }, { status: 400 })
     }
@@ -30,9 +30,9 @@ export async function POST(req: Request) {
 
     const reason = requestedReason || 'Premium mensual'
 
-    const baseUrl = process.env.APP_BASE_URL || ''
+    const baseUrl = process.env.APP_URL || ''
     if (!baseUrl) {
-      return NextResponse.json({ error: 'Missing APP_BASE_URL' }, { status: 500 })
+      return NextResponse.json({ error: 'Missing APP_URL' }, { status: 500 })
     }
 
     const { data: payRow, error: insErr } = await supabase
@@ -48,6 +48,42 @@ export async function POST(req: Request) {
       .single()
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
 
+
+// 🔎 DEBUG: confirmar país/site del access token en producción
+try {
+  const token = process.env.MP_ACCESS_TOKEN!;
+  const r = await fetch("https://api.mercadopago.com/users/me", {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const me = await r.json();
+
+  console.log("[mp-subscription][users/me]", {
+    ok: r.ok,
+    status: r.status,
+    id: me?.id,
+    nickname: me?.nickname,
+    site_id: me?.site_id,       // <- CLAVE (MLU/MLA/etc)
+    country_id: me?.country_id, // <- CLAVE
+    currency_id_env: currencyId,
+    base_url_env: baseUrl,
+  });
+} catch (e: any) {
+  console.log("[mp-subscription][users/me] failed", e?.message ?? e);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
     const { preapproval } = getMP()
     const notificationUrl = `${baseUrl}/api/mp/webhook`
     const initialBackUrl = `${baseUrl}/paywall?subscription=1`
@@ -59,16 +95,15 @@ export async function POST(req: Request) {
         reason,
         back_url: initialBackUrl,
         external_reference: String(payRow.id),
-        auto_return: 'approved',
         auto_recurring: {
           frequency: 1,
           frequency_type: 'months',
           transaction_amount: amount,
           currency_id: currencyId,
+          start_date: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
         },
         payer_email: String(user.email ?? ''),
         notification_url: notificationUrl,
-        status: 'authorized',
       },
     }
 
@@ -134,9 +169,19 @@ export async function POST(req: Request) {
       payment_id: String(payRow.id),
       amount,
     })
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'Unexpected error' }, { status: 500 })
-  }
+} catch (e: any) {
+  console.error("[mp-subscription] error", {
+    message: e?.message,
+    cause: e?.cause,
+    status: e?.status,
+    response: e?.response?.data ?? e?.response ?? null,
+  });
+  return NextResponse.json(
+    { error: e?.response?.data?.message ?? e?.message ?? "Unexpected error" },
+    { status: 500 }
+  );
+}
+
 }
 
 export const runtime = 'nodejs'

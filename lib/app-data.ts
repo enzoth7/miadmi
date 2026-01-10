@@ -12,10 +12,14 @@ export type EstimacionGeneral = {
 };
 
 export type EstimacionEspecifica = {
-  id?: string | null;
-  ingresos: Record<string, any>;
-  egresos: Record<string, any>;
+  id: string | null;
+  ingresos: any;
+  egresos: any;
+  projection?: any | null;
+  projection_anchor?: string | null;
+  ahorro_mensual?: number | null;
 };
+
 
 export type EstimationActiveMode = "general" | "especifica";
 
@@ -24,8 +28,16 @@ export type AppSettingsData = {
     active?: EstimationActiveMode;
     [key: string]: any;
   };
+  customCategories?: {
+    ingresos?: Array<{ id?: string; nombre?: string }>;
+    egresos?: Array<{ id?: string; nombre?: string }>;
+  };
+  onboarding?: {
+    completedAt?: string | null;
+  };
   [key: string]: any;
 };
+
 
 export const DEFAULT_ESTIMATION_MODE: EstimationActiveMode = "general";
 
@@ -49,12 +61,40 @@ export type ProfileData = {
   location: string;
   occupation: string;
   avatarUrl: string;
+  avatar_url?: string | null;
+};
+
+export type EstimablePrestamo = {
+  id: string;
+  nombre: string;
+  cuotas: string | number;
+  montoCuota: string | number;
+  mesInicio: string;
+  mesFin: string;
+};
+
+export type EstimableTarjeta = {
+  id: string;
+  nombre: string;
+  cuotas: string | number;
+  montoCuota: string | number;
+  mesInicio: string;
+  mesFin: string;
+  valorTotal: string | number;
+  suscripcion: boolean;
+};
+
+export type EstimableCompra = {
+  id: string;
+  nombre: string;
+  valor: string | number;
+  mes: string;
 };
 
 export type EstimablesGrouped = {
-  prestamos: Array<{ id: string; nombre: string; cuotas: string; montoCuota: string; mesInicio?: string }>;
-  tarjetas: Array<{ id: string; nombre: string; cuotas: string; montoCuota: string; mesInicio?: string }>;
-  compras: Array<{ id: string; nombre: string; valor: string; mes: string }>;
+  prestamos: EstimablePrestamo[];
+  tarjetas: EstimableTarjeta[];
+  compras: EstimableCompra[];
 };
 
 export type ControlMensualState = {
@@ -89,11 +129,9 @@ export async function fetchProfile(
   supabase: SupabaseClient,
   userId: string
 ): Promise<ProfileData | null> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("profiles")
-    .select(
-      "id, email, first_name, last_name, age, location, occupation, avatar_url"
-    )
+    .select("id, email, first_name, last_name, age, location, occupation, avatar_url")
     .eq("id", userId)
     .maybeSingle();
 
@@ -109,6 +147,7 @@ export async function fetchProfile(
     location: data.location ?? "",
     occupation: data.occupation ?? "",
     avatarUrl: data.avatar_url ?? "",
+    avatar_url: data.avatar_url ?? null,
   };
 }
 
@@ -136,12 +175,10 @@ export async function upsertProfile(
   if (payload.occupation !== undefined) row.occupation = payload.occupation || null;
   if (payload.avatarUrl !== undefined) row.avatar_url = payload.avatarUrl || null;
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("profiles")
     .upsert(row, { onConflict: "id" })
-    .select(
-      "id, email, first_name, last_name, age, location, occupation, avatar_url"
-    )
+    .select("id, email, first_name, last_name, age, location, occupation, avatar_url")
     .maybeSingle();
 
   if (error) throw error;
@@ -156,8 +193,10 @@ export async function upsertProfile(
     location: data.location ?? "",
     occupation: data.occupation ?? "",
     avatarUrl: data.avatar_url ?? "",
+    avatar_url: data.avatar_url ?? null,
   };
 }
+
 
 export async function fetchEstimacionGeneral(
   supabase: SupabaseClient,
@@ -207,6 +246,7 @@ export async function upsertEstimacionGeneral(
       .maybeSingle();
 
     if (error) throw error;
+    await persistEstimacionGeneralHistory(supabase, userId, row);
     return data?.id ?? payload.id;
   } else {
     const { data, error } = await supabase
@@ -216,9 +256,162 @@ export async function upsertEstimacionGeneral(
       .maybeSingle();
 
     if (error) throw error;
+    await persistEstimacionGeneralHistory(supabase, userId, row);
     return data?.id ?? null;
   }
 }
+
+async function persistEstimacionGeneralHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  row: {
+    sueldos: number;
+    otros_ingresos: number;
+    ahorro_deseado: number;
+    saldo_inicial: number;
+    egresos: EstimacionGeneral["egresos"];
+  }
+) {
+  const periodMonthDate = new Date();
+  periodMonthDate.setDate(1);
+  const periodMonth = periodMonthDate.toISOString().slice(0, 10);
+
+  const historyPayload = {
+    sueldos: row.sueldos,
+    otros_ingresos: row.otros_ingresos,
+    ahorro_deseado: row.ahorro_deseado,
+    saldo_inicial: row.saldo_inicial,
+    egresos: row.egresos,
+  };
+
+  const { data: existing, error: historyLookupError } = await supabase
+    .from("estimacion_general_history")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+
+  if (historyLookupError) {
+    console.error("estimacion_general_history error", historyLookupError);
+    throw historyLookupError;
+  }
+
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from("estimacion_general_history")
+      .update(historyPayload)
+      .eq("user_id", userId)
+      .eq("period_month", periodMonth);
+
+    if (updateError) {
+      console.error("estimacion_general_history error", updateError);
+      throw updateError;
+    }
+    return;
+  }
+
+  const historyRow = {
+    user_id: userId,
+    period_month: periodMonth,
+    ...historyPayload,
+  };
+
+  const { error: insertError } = await supabase
+    .from("estimacion_general_history")
+    .insert(historyRow);
+
+  if (insertError) {
+    console.error("estimacion_general_history error", insertError);
+    throw insertError;
+  }
+}
+
+
+export async function completeOnboardingForUser(
+  userId: string,
+  payload: {
+    ingreso: number | null;
+    resumenVivienda: number | null;
+    resumenAlimentacion: number | null;
+    resumenServiciosTransporte: number | null;
+    resumenDeudas: number | null;
+    resumenOtros: number | null;
+  }
+): Promise<{
+  generalSnapshot: EstimacionGeneral;
+  especificaSnapshot: any | null;
+  estimablesSnapshot: {
+    prestamos: any[];
+    tarjetas: any[];
+    compras: any[];
+  };
+}> {
+  const supabase = supabaseBrowser();
+
+  // Normalizamos números usando el helper n(...) que ya tenés al final del archivo
+  const ingreso = n(payload.ingreso) ?? 0;
+  const V = n(payload.resumenVivienda) ?? 0;
+  const A = n(payload.resumenAlimentacion) ?? 0;
+  const S = n(payload.resumenServiciosTransporte) ?? 0;
+  const D = n(payload.resumenDeudas) ?? 0;
+  const O = n(payload.resumenOtros) ?? 0;
+
+  // TOTAL de gastos del onboarding
+  const totalGastos = V + A + S + D + O;
+
+  // Repartimos los buckets del onboarding en tus categorías oficiales.
+  const superMonto = Math.round(A);              // 100% de Alimentación
+  const salidasMonto = Math.round(O * 0.4);
+  const farmaciaMonto = Math.round(O * 0.3);
+  const ropaMonto = Math.round(O * 0.3);
+  const transporteMonto = Math.round(S * 0.7);
+  const gastosGeneralesMonto = Math.round(S * 0.3 + D); // Deudas van acá
+  const alquilerMonto = Math.round(V);
+
+  // Ahorro deseado = lo que te "sobra": ingreso - total gastos (mínimo 0)
+  const ahorroDeseado = Math.max(ingreso - totalGastos, 0);
+
+  const egresos: EstimacionGeneral["egresos"] = [
+    { nombre: "Super", monto: superMonto },
+    { nombre: "Alquiler/Hipoteca", monto: alquilerMonto },
+    { nombre: "Salidas", monto: salidasMonto },
+    { nombre: "Farmacia y salud", monto: farmaciaMonto },
+    { nombre: "Transporte", monto: transporteMonto },
+    { nombre: "Gastos generales", monto: gastosGeneralesMonto },
+    { nombre: "Ropa y gustos", monto: ropaMonto },
+  ]
+    // Filtramos los que quedaron en 0 para no ensuciar la UI
+    .filter((e) => (e.monto ?? 0) > 0)
+    .map((e) => ({ ...e }));
+
+  const estimacion: EstimacionGeneral = {
+    sueldos: ingreso,
+    otrosIngresos: 0,
+    ahorroDeseado,
+    saldoInicial: 0,
+    egresos,
+  };
+
+  // Guardamos la estimación general en la tabla principal
+  await upsertEstimacionGeneral(supabase, userId, estimacion);
+
+  // Marcamos que el usuario completó el onboarding en app_settings
+  await markOnboardingCompleted(supabase, userId);
+
+  // Devolvemos snapshots para hidratar la Home
+  return {
+    generalSnapshot: estimacion,
+    especificaSnapshot: null, // más adelante podés generar una específica base si querés
+    estimablesSnapshot: {
+      prestamos: [],
+      tarjetas: [],
+      compras: [],
+    },
+  };
+}
+
+
+
 
 export async function fetchEstimacionEspecifica(
   supabase: SupabaseClient,
@@ -226,26 +419,44 @@ export async function fetchEstimacionEspecifica(
 ): Promise<EstimacionEspecifica | null> {
   const { data } = await supabase
     .from("estimacion_especifica")
-    .select("id, ingresos, egresos")
+    .select("id, ingresos, egresos, projection, projection_anchor, ahorro_mensual")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return null;
+
   return {
     id: data.id ?? null,
     ingresos: data.ingresos ?? {},
     egresos: data.egresos ?? {},
+    projection: data.projection ?? null,
+    projection_anchor: data.projection_anchor ?? null,
+    ahorro_mensual: data.ahorro_mensual ?? null,
   };
 }
+
 
 export async function upsertEstimacionEspecifica(
   supabase: SupabaseClient,
   userId: string,
-  payload: { id?: string | null; ingresos: any; egresos: any }
+  payload: {
+    id?: string | null;
+    ingresos: any;
+    egresos: any;
+    projection?: any;
+    projection_anchor?: string | null;
+    ahorro_mensual?: number | null;
+  }
 ) {
   const row = {
     ingresos: payload.ingresos ?? {},
     egresos: payload.egresos ?? {},
+    projection: payload.projection ?? null,
+    projection_anchor: payload.projection_anchor ?? null,
+    ahorro_mensual:
+      payload.ahorro_mensual === null || payload.ahorro_mensual === undefined
+        ? null
+        : payload.ahorro_mensual,
   };
 
   if (payload.id) {
@@ -257,6 +468,7 @@ export async function upsertEstimacionEspecifica(
       .maybeSingle();
 
     if (error) throw error;
+    await persistEstimacionEspecificaHistory(supabase, userId, row);
     return data?.id ?? payload.id;
   } else {
     const { data, error } = await supabase
@@ -266,7 +478,63 @@ export async function upsertEstimacionEspecifica(
       .maybeSingle();
 
     if (error) throw error;
+    await persistEstimacionEspecificaHistory(supabase, userId, row);
     return data?.id ?? null;
+  }
+}
+
+async function persistEstimacionEspecificaHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  row: { ingresos: any; egresos: any }
+) {
+  const periodMonthDate = new Date();
+  periodMonthDate.setDate(1);
+  const periodMonth = periodMonthDate.toISOString().slice(0, 10);
+
+  const historyPayload = {
+    ingresos: row.ingresos ?? {},
+    egresos: row.egresos ?? {},
+  };
+
+  const { data: existing, error: historyLookupError } = await supabase
+    .from("estimacion_especifica_history")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+
+  if (historyLookupError) {
+    console.error("estimacion_especifica_history lookup error", historyLookupError);
+    throw historyLookupError;
+  }
+
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from("estimacion_especifica_history")
+      .update(historyPayload)
+      .eq("user_id", userId)
+      .eq("period_month", periodMonth);
+
+    if (updateError) {
+      console.error("estimacion_especifica_history update error", updateError);
+      throw updateError;
+    }
+    return;
+  }
+
+  const historyRow = {
+    user_id: userId,
+    period_month: periodMonth,
+    ...historyPayload,
+  };
+  const { error: insertError } = await supabase
+    .from("estimacion_especifica_history")
+    .insert(historyRow);
+
+  if (insertError) {
+    console.error("estimacion_especifica_history insert error", insertError);
+    throw insertError;
   }
 }
 
@@ -288,6 +556,48 @@ export async function fetchAppSettings(
   }
 
   return {};
+}
+
+export async function fetchCustomCategories(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ ingresos?: Array<{ id?: string; nombre?: string }>; egresos?: Array<{ id?: string; nombre?: string }> } | null> {
+  const settings = await fetchAppSettings(supabase, userId);
+  const payload = settings?.customCategories;
+  if (payload && typeof payload === "object") {
+    return payload;
+  }
+  return null;
+}
+
+export async function saveCustomCategories(
+  supabase: SupabaseClient,
+  userId: string,
+  payload: {
+    ingresos: Array<{ id?: string; nombre?: string }>;
+    egresos: Array<{ id?: string; nombre?: string }>;
+  }
+) {
+  let current: AppSettingsData = {};
+  try {
+    current = await fetchAppSettings(supabase, userId);
+  } catch {
+    current = {};
+  }
+
+  const nextData: AppSettingsData = {
+    ...current,
+    customCategories: {
+      ingresos: Array.isArray(payload.ingresos) ? payload.ingresos : [],
+      egresos: Array.isArray(payload.egresos) ? payload.egresos : [],
+    },
+  };
+
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ user_id: userId, data: nextData }, { onConflict: "user_id" });
+
+  if (error) throw error;
 }
 
 export async function fetchEstimationMode(
@@ -337,6 +647,56 @@ export async function saveEstimationMode(
 
   return target;
 }
+
+
+export async function markOnboardingCompleted(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  let current: AppSettingsData = {};
+  try {
+    current = await fetchAppSettings(supabase, userId);
+  } catch {
+    current = {};
+  }
+
+  const nextData: AppSettingsData = {
+    ...current,
+    onboarding: {
+      ...(current.onboarding ?? {}),
+      completedAt: new Date().toISOString(),
+    },
+  };
+
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert(
+      { user_id: userId, data: nextData },
+      { onConflict: "user_id" }
+    );
+
+  if (error) throw error;
+}
+
+
+export async function hasCompletedOnboarding(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  try {
+    const settings = await fetchAppSettings(supabase, userId);
+    // Si existe settings.onboarding.completed === true => ya hizo el onboarding
+    return Boolean((settings as any)?.onboarding?.completed);
+  } catch {
+    // Si hay error leyendo settings, asumimos que NO completó
+    return false;
+  }
+}
+
+
+
+
+
 
 export async function fetchMetas(
   supabase: SupabaseClient,
@@ -403,21 +763,23 @@ export async function fetchEstimablesGrouped(
   supabase: SupabaseClient,
   userId: string
 ): Promise<EstimablesGrouped> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("egresos_estimables")
-    .select("id, tipo, nombre, cuotas_rest, monto_cuota, mes_objetivo, estado, updated_at")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("fetchEstimablesGrouped error", error);
+    throw error;
+  }
 
   const rows = Array.isArray(data) ? data : [];
   const bundleRow = rows.find((row) => row?.estado === "bundle");
 
   if (bundleRow) {
-    try {
-      const payload = JSON.parse(String(bundleRow.nombre ?? "{}"));
+    const payload = extractEstimablesBundlePayload(bundleRow);
+    if (payload) {
       return normalizeEstimablesPayload(payload);
-    } catch {
-      // ignore malformed JSON and fall back to row-based parsing
     }
   }
 
@@ -430,13 +792,17 @@ export async function fetchEstimablesGrouped(
   for (const row of rows) {
     if (!row || row.estado === "bundle") continue;
     const tipo = String(row.tipo ?? "");
+    const monthSource =
+      row.mes_objetivo ?? row.updated_at ?? row.created_at ?? null;
+
     if (tipo === "prestamo") {
       grouped.prestamos.push({
         id: ensureEstimableId(row.id),
         nombre: row.nombre ?? "",
         cuotas: row.cuotas_rest != null ? String(row.cuotas_rest) : "",
         montoCuota: row.monto_cuota != null ? String(row.monto_cuota) : "",
-        mesInicio: toMonthString(row?.updated_at) ?? "",
+        mesInicio: toMonthString(monthSource),
+        mesFin: "",
       });
     } else if (tipo === "tarjeta") {
       grouped.tarjetas.push({
@@ -444,19 +810,70 @@ export async function fetchEstimablesGrouped(
         nombre: row.nombre ?? "",
         cuotas: row.cuotas_rest != null ? String(row.cuotas_rest) : "",
         montoCuota: row.monto_cuota != null ? String(row.monto_cuota) : "",
-        mesInicio: toMonthString(row?.updated_at) ?? "",
+        mesInicio: toMonthString(monthSource),
+        mesFin: "",
+        valorTotal: "",
+        suscripcion: false,
       });
     } else if (tipo === "compra") {
       grouped.compras.push({
         id: ensureEstimableId(row.id),
         nombre: row.nombre ?? "",
         valor: row.monto_cuota != null ? String(row.monto_cuota) : "",
-        mes: toMonthString(row.mes_objetivo),
+        mes: toMonthString(row.mes_objetivo ?? monthSource),
       });
     }
   }
 
   return grouped;
+}
+
+function extractEstimablesBundlePayload(row: any) {
+  if (!row) return null;
+
+  const fromColumns = {
+    prestamos: Array.isArray(row.prestamos) ? row.prestamos : [],
+    tarjetas: Array.isArray(row.tarjetas) ? row.tarjetas : [],
+    compras: Array.isArray(row.compras) ? row.compras : [],
+  };
+
+  const parsed = parseBundleFromNombre(row.nombre);
+  const parsedHasContent =
+    parsed &&
+    (parsed.prestamos.length > 0 ||
+      parsed.tarjetas.length > 0 ||
+      parsed.compras.length > 0);
+
+  if (parsedHasContent) {
+    return parsed;
+  }
+
+  if (
+    fromColumns.prestamos.length > 0 ||
+    fromColumns.tarjetas.length > 0 ||
+    fromColumns.compras.length > 0
+  ) {
+    return fromColumns;
+  }
+
+  return fromColumns;
+}
+
+function parseBundleFromNombre(raw: any) {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      return {
+        prestamos: Array.isArray(parsed.prestamos) ? parsed.prestamos : [],
+        tarjetas: Array.isArray(parsed.tarjetas) ? parsed.tarjetas : [],
+        compras: Array.isArray(parsed.compras) ? parsed.compras : [],
+      };
+    }
+  } catch {
+    // ignore invalid JSON
+  }
+  return null;
 }
 
 export async function upsertEstimable(
@@ -528,9 +945,62 @@ export async function replaceEstimables(
       tipo: "prestamo",
       nombre: payload,
       estado: "bundle",
+      prestamos: bundle.prestamos,
+      tarjetas: bundle.tarjetas,
+      compras: bundle.compras,
     });
 
   if (insertError) throw insertError;
+
+  const periodMonthDate = new Date();
+  periodMonthDate.setDate(1);
+  const periodMonth = periodMonthDate.toISOString().slice(0, 10);
+  const historyPayload = {
+    prestamos: bundle.prestamos,
+    tarjetas: bundle.tarjetas,
+    compras: bundle.compras,
+  };
+
+  const { data: existingHistory, error: historyLookupError } = await supabase
+    .from("egresos_estimables_history")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+
+  if (historyLookupError) {
+    console.error("replaceEstimables history lookup error", historyLookupError);
+    throw historyLookupError;
+  }
+
+  if (existingHistory) {
+    const { error: historyUpdateError } = await supabase
+      .from("egresos_estimables_history")
+      .update(historyPayload)
+      .eq("user_id", userId)
+      .eq("period_month", periodMonth);
+
+    if (historyUpdateError) {
+      console.error("replaceEstimables history update error", historyUpdateError);
+      throw historyUpdateError;
+    }
+    return;
+  }
+
+  const historyRow = {
+    user_id: userId,
+    period_month: periodMonth,
+    ...historyPayload,
+  };
+
+  const { error: historyError } = await supabase
+    .from("egresos_estimables_history")
+    .insert(historyRow);
+
+  if (historyError) {
+    console.error("replaceEstimables history insert error", historyError);
+    throw historyError;
+  }
 }
 
 function buildEstimablesBundle(data: EstimablesGrouped) {
@@ -542,6 +1012,7 @@ function buildEstimablesBundle(data: EstimablesGrouped) {
         cuotas: toIntOrNull(item?.cuotas),
         montoCuota: toNumberOrNull(item?.montoCuota),
         mesInicio: toMonthKey(item?.mesInicio),
+        mesFin: toMonthKey(item?.mesFin),
       })
     ),
     tarjetas: (Array.isArray(data.tarjetas) ? data.tarjetas : []).map(
@@ -551,6 +1022,9 @@ function buildEstimablesBundle(data: EstimablesGrouped) {
         cuotas: toIntOrNull(item?.cuotas),
         montoCuota: toNumberOrNull(item?.montoCuota),
         mesInicio: toMonthKey(item?.mesInicio),
+        mesFin: toMonthKey(item?.mesFin),
+        valorTotal: toNumberOrNull(item?.valorTotal),
+        suscripcion: Boolean(item?.suscripcion),
       })
     ),
     compras: (Array.isArray(data.compras) ? data.compras : []).map((item) => ({
@@ -571,6 +1045,7 @@ function normalizeEstimablesPayload(payload: any): EstimablesGrouped {
           cuotas: toCleanString(item?.cuotas),
           montoCuota: toCleanString(item?.montoCuota),
           mesInicio: toMonthString(item?.mesInicio),
+          mesFin: toMonthString(item?.mesFin),
         }))
       : [],
     tarjetas: Array.isArray(payload?.tarjetas)
@@ -580,6 +1055,9 @@ function normalizeEstimablesPayload(payload: any): EstimablesGrouped {
           cuotas: toCleanString(item?.cuotas),
           montoCuota: toCleanString(item?.montoCuota),
           mesInicio: toMonthString(item?.mesInicio),
+          mesFin: toMonthString(item?.mesFin),
+          valorTotal: toCleanString(item?.valorTotal),
+          suscripcion: Boolean(item?.suscripcion),
         }))
       : [],
     compras: Array.isArray(payload?.compras)
@@ -649,9 +1127,7 @@ export async function fetchControlMensual(
 ): Promise<ControlMensualState | null> {
   const { data, error } = await supabase
     .from("control_mensual")
-    .select(
-      "inicial_cash, inicial_tarjetas, actual_cash, actual_tarjetas, movimientos"
-    )
+    .select("actual_cash, actual_tarjetas, movimientos")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -669,14 +1145,17 @@ export async function fetchControlMensual(
       }))
     : [];
 
+  const actualCash = data.actual_cash ?? null;
+  const actualTarjetas = data.actual_tarjetas ?? null;
+
   return {
     inicial: {
-      cash: data.inicial_cash != null ? String(data.inicial_cash) : "",
-      tarjetas: data.inicial_tarjetas != null ? String(data.inicial_tarjetas) : "",
+      cash: actualCash != null ? String(actualCash) : "",
+      tarjetas: actualTarjetas != null ? String(actualTarjetas) : "",
     },
     actual: {
-      cash: data.actual_cash != null ? String(data.actual_cash) : "",
-      tarjetas: data.actual_tarjetas != null ? String(data.actual_tarjetas) : "",
+      cash: actualCash != null ? String(actualCash) : "",
+      tarjetas: actualTarjetas != null ? String(actualTarjetas) : "",
     },
     movimientos,
   };
@@ -701,8 +1180,6 @@ export async function saveControlMensual(
     .upsert(
       {
         user_id: userId,
-        inicial_cash: n(payload.inicial.cash),
-        inicial_tarjetas: n(payload.inicial.tarjetas),
         actual_cash: n(payload.actual.cash),
         actual_tarjetas: n(payload.actual.tarjetas),
         movimientos,
@@ -711,6 +1188,82 @@ export async function saveControlMensual(
     );
 
   if (upsertError) throw upsertError;
+
+  await persistControlMensualHistory(supabase, userId, {
+    actual: {
+      cash: n(payload.actual.cash),
+      tarjetas: n(payload.actual.tarjetas),
+    },
+    movimientos,
+  });
+}
+
+async function persistControlMensualHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  payload: {
+    actual: { cash: number | null; tarjetas: number | null };
+    movimientos: Array<{
+      id: string;
+      fecha: string;
+      categoria: string;
+      desc: string;
+      monto: number | null;
+      medio: string;
+    }>;
+  }
+) {
+  const periodMonthDate = new Date();
+  periodMonthDate.setDate(1);
+  const periodMonth = periodMonthDate.toISOString().slice(0, 10);
+
+  const historyPayload = {
+    actual_cash: payload.actual.cash,
+    actual_tarjetas: payload.actual.tarjetas,
+    movimientos: payload.movimientos,
+  };
+
+  const { data: existing, error: historyLookupError } = await supabase
+    .from("control_mensual_history")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+
+  if (historyLookupError) {
+    console.error("control_mensual_history lookup error", historyLookupError);
+    throw historyLookupError;
+  }
+
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from("control_mensual_history")
+      .update(historyPayload)
+      .eq("user_id", userId)
+      .eq("period_month", periodMonth);
+
+    if (updateError) {
+      console.error("control_mensual_history update error", updateError);
+      throw updateError;
+    }
+
+    return;
+  }
+
+  const historyRow = {
+    user_id: userId,
+    period_month: periodMonth,
+    ...historyPayload,
+  };
+
+  const { error: insertError } = await supabase
+    .from("control_mensual_history")
+    .insert(historyRow);
+
+  if (insertError) {
+    console.error("control_mensual_history insert error", insertError);
+    throw insertError;
+  }
 }
 
 function n(value: string | number | null | undefined): number | null {

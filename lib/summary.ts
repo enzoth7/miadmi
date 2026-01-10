@@ -85,6 +85,8 @@ export type DashboardSummary = {
     egresos: number;
     egresosFijos: number;
     egresosVariables: number;
+    estimables: number;
+    ahorroDeseado: number;
     resultado: number;
     capacidadMensual: number;
     saldoProyectado: number;
@@ -184,11 +186,11 @@ export function buildDashboardSummary(input: SummaryInput): DashboardSummary {
 
   const estimablesTotal = prestamos + tarjetas + compras;
 
-  const egresosVariables = especificaEgresos + estimablesTotal;
+  const egresosVariables = especificaEgresos;
   const ingresosTotales = generalIngresos + especificaIngresos;
   const egresosTotales = generalEgresos + egresosVariables;
   const resultado = ingresosTotales - egresosTotales;
-  const capacidadMensual = resultado - ahorroDeseado;
+  const capacidadMensual = resultado;
   const saldoInicial = includeGeneral
     ? rawSaldoInicial
     : includeEspecifica
@@ -216,14 +218,16 @@ export function buildDashboardSummary(input: SummaryInput): DashboardSummary {
       total: estimablesTotal,
     },
     totals: {
-      ingresos: ingresosTotales,
-      egresos: egresosTotales,
-      egresosFijos: generalEgresos,
-      egresosVariables,
-      resultado,
-      capacidadMensual,
-      saldoProyectado,
-    },
-    activeMode,
+    ingresos: ingresosTotales,
+    egresos: egresosTotales,
+    egresosFijos: generalEgresos,
+    egresosVariables,
+    estimables: estimablesTotal,
+    ahorroDeseado,
+    resultado,
+    capacidadMensual,
+    saldoProyectado,
+  },
+  activeMode,
   };
 }

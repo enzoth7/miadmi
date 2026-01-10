@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { supabaseBrowser } from "../lib/supabaseBrowser";
 
 const SessionContext = createContext({
@@ -13,54 +13,85 @@ const SessionContext = createContext({
 
 export function SessionProvider({ children }) {
   const supabase = supabaseBrowser();
+
   const [user, setUser] = useState(null);
   const [plan, setPlan] = useState("free");
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchSessionAndPlan() {
+  const fetchSessionAndPlan = useCallback(async () => {
     try {
       setLoading(true);
+
       const { data: { session } } = await supabase.auth.getSession();
       const u = session?.user ?? null;
       setUser(u);
 
-      if (u) {
-        // Leemos el plan del perfil del usuario
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("plan,premium_until")
-          .eq("id", u.id)
-          .single();
+   if (u) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("plan,premium_until")
+    .eq("id", u.id)
+    .single();
 
-        if (!error && data) {
-          setPlan(data.plan || "free");
-          setPremiumUntil(data.premium_until ?? null);
-        } else {
-          setPlan("free");
-          setPremiumUntil(null);
-        }
-      } else {
-        setPlan("free");
-        setPremiumUntil(null);
-      }
+  if (!error && data) {
+    const until = data.premium_until ? new Date(data.premium_until) : null;
+    const stillPremium =
+      data.plan === "premium" &&
+      until &&
+      until.getTime() > Date.now();
+
+    setPlan(stillPremium ? "premium" : "free");
+    setPremiumUntil(data.premium_until ?? null);
+  } else {
+    setPlan("free");
+    setPremiumUntil(null);
+  }
+} else {
+  setPlan("free");
+  setPremiumUntil(null);
+}
+
     } finally {
       setLoading(false);
     }
-  }
+  }, [supabase]);
+
+  const refreshOnReturn = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) {
+        await supabase.auth.refreshSession();
+      }
+    } catch {
+      // noop
+    } finally {
+      fetchSessionAndPlan();
+    }
+  }, [supabase, fetchSessionAndPlan]);
 
   useEffect(() => {
     fetchSessionAndPlan();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, _session) => {
-      // Cuando cambie la sesión (login/logout), re-cargamos
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
       fetchSessionAndPlan();
     });
+
+    // ✅ mobile: cuando volvés a la app, refrescá tokens
+    const onFocus = () => refreshOnReturn();
+    const onVis = () => {
+      if (!document.hidden) refreshOnReturn();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
       sub?.subscription?.unsubscribe?.();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase, fetchSessionAndPlan, refreshOnReturn]);
 
   const value = useMemo(
     () => ({
@@ -70,7 +101,7 @@ export function SessionProvider({ children }) {
       loading,
       refresh: fetchSessionAndPlan,
     }),
-    [user, plan, premiumUntil, loading]
+    [user, plan, premiumUntil, loading, fetchSessionAndPlan]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

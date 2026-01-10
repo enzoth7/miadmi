@@ -1,0 +1,164 @@
+﻿"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+
+const SLIDE_INTERVAL = 7000;
+
+const SLIDES = [
+  {
+    title: "Ordená tus finanzas sin ser experto en números",
+    subtitle:
+      "Mi Admi te ayuda a estimar cuánto vas a tener el mes que viene, organizar tus gastos y dejar de adivinar si llegás a fin de mes.",
+    primaryCta: {
+      label: "Crear cuenta gratis",
+      href: "/login?mode=signup",
+    },
+    secondaryCta: {
+      label: "Iniciar sesión",
+      href: "/login?mode=login",
+    },
+    imageSrc: "/Slide1.png",
+  },
+  {
+    title: "Mirá tu mes completo en una sola pantalla",
+    subtitle:
+      "Ingresos, egresos, estimaciones y objetivos en un tablero simple, pensado para gente que se marea con Excel.",
+    primaryCta: { label: "Ver cómo funciona", href: "/como-funciona" },
+    secondaryCta: {
+      label: "Iniciar sesión",
+      href: "/login?mode=login",
+    },
+    imageSrc: "/Slide2.png",
+  },
+  {
+    title: "Pago único, acceso premium para siempre",
+    subtitle:
+      "Empezás gratis y, si te sirve, hacés un solo pago y desbloqueás todas las funciones de Mi Admi de por vida. Sin suscripciones.",
+    primaryCta: { label: "Ver planes", href: "/planes" },
+    secondaryCta: {
+      label: "Crear cuenta gratis",
+      href: "/login?mode=signup",
+    },
+    imageSrc: "/Slide3.png",
+  },
+];
+
+const slideTransforms = {
+  active: "translateX(-50%) translateZ(0px) scale(1) rotateY(0deg)",
+  prev:
+    "translateX(calc(-50% - min(22vw, 14rem))) translateZ(-120px) scale(0.94) rotateY(-12deg)",
+  next:
+    "translateX(calc(-50% + min(22vw, 14rem))) translateZ(-120px) scale(0.94) rotateY(12deg)",
+  hidden: "translateX(-50%) translateZ(-260px) scale(0.85)",
+};
+
+const stateClasses = {
+  active: "z-20 opacity-100",
+  prev: "z-10 opacity-0 md:opacity-70",
+  next: "z-10 opacity-0 md:opacity-70",
+  hidden: "z-0 opacity-0 pointer-events-none",
+};
+
+function getSlideState(index, activeIndex, total) {
+  if (index === activeIndex) return "active";
+  if (index === (activeIndex - 1 + total) % total) return "prev";
+  if (index === (activeIndex + 1) % total) return "next";
+  return "hidden";
+}
+
+export default function HeroCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
+    }, SLIDE_INTERVAL);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section>
+      <div
+        className="relative flex min-h-[32rem] w-full items-center justify-center"
+        style={{ perspective: "1200px" }}
+      >
+        {SLIDES.map((slide, index) => {
+          const state = getSlideState(index, activeIndex, SLIDES.length);
+
+          return (
+            <article
+              key={slide.title}
+              className={`absolute inset-y-0 left-1/2 grid w-[min(1100px,90vw)] grid-cols-1 gap-8 rounded-[32px] border border-white/15 p-6 text-white transition-opacity duration-500 ease-out lg:grid-cols-2 lg:gap-12 lg:p-10 ${
+                stateClasses[state] ?? stateClasses.hidden
+              } ${state !== "active" ? "pointer-events-none" : ""} ${
+                state === "active"
+                  ? "bg-slate-950/85 backdrop-blur-md backdrop-saturate-150 shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
+                  : "bg-gradient-to-br from-[#0d1624]/90 to-[#050a12]/80 shadow-2xl shadow-black/40"
+              }`}
+              style={{
+                transform: slideTransforms[state] ?? slideTransforms.hidden,
+                transition: "transform 600ms ease, opacity 600ms ease",
+                transformStyle: "preserve-3d",
+              }}
+            >
+              <div className="space-y-6 lg:space-y-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+                  Finanzas personales para Uruguay
+                </p>
+                <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
+                  {slide.title}
+                </h1>
+                <p className="text-lg text-white/80">{slide.subtitle}</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link
+                    href={slide.primaryCta.href}
+                    className="rounded-full bg-emerald-400 px-6 py-3 text-base font-semibold text-gray-900 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
+                  >
+                    {slide.primaryCta.label}
+                  </Link>
+                  <Link
+                    href={slide.secondaryCta.href}
+                    className="text-base font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline"
+                  >
+                    {slide.secondaryCta.label}
+                  </Link>
+                </div>
+              </div>
+              <div className="flex items-center justify-center">
+                <div className="w-full overflow-hidden rounded-3xl">
+  <Image
+    src={slide.imageSrc}
+    alt={slide.title}
+    width={900}
+    height={600}
+    className="h-auto w-full object-cover"
+    priority={index === 0}
+  />
+</div>
+
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <div className="mt-10 flex justify-center gap-3">
+        {SLIDES.map((_, index) => (
+          <button
+            key={`dot-${index}`}
+            type="button"
+            aria-label={`Ir al slide ${index + 1}`}
+            onClick={() => setActiveIndex(index)}
+            className={`h-3 w-3 rounded-full transition ${
+              index === activeIndex
+                ? "scale-110 bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]"
+                : "bg-white/30 hover:bg-white/60"
+            }`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}

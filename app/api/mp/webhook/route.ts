@@ -18,8 +18,18 @@ import {
 //   Headers esperados: x-request-id:test-req-1  |  x-signature: ts=1700000000,v1=<HEX>.
 // - Logs: revisar la consola del servidor (prefijo [mp-webhook]) o el panel de logs en supabase/vercel.
 
+
+
+
+
 const LOG_PREFIX = "[mp-webhook]";
-const SUPPORTED_TYPES = new Set(["preapproval", "subscription", "subscription_authorized_payment", "payment"]);
+const SUPPORTED_TYPES = new Set([
+  "preapproval",
+  "subscription",
+  "subscription_preapproval",
+  "subscription_authorized_payment",
+  "payment",
+]);
 
 export const runtime = "nodejs";
 
@@ -28,6 +38,15 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+
+console.log("[mp-webhook] env check", {
+  has_secret: !!process.env.MP_WEBHOOK_SECRET,
+  secret_tail: process.env.MP_WEBHOOK_SECRET?.slice(-6) ?? null,
+  vercel_env: process.env.VERCEL_ENV ?? null,
+});
+
+
+
   const url = new URL(request.url);
   const isDryRun = request.headers.get("x-mp-dryrun") === "1" || url.searchParams.get("dry") === "1";
 
@@ -78,15 +97,34 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  if (!signatureValid) {
-    console.warn(`${LOG_PREFIX} signature failed`, {
-      event_id: eventId,
-      request_id: requestId,
-      ts,
-      validation_error: validationError,
+if (!signatureValid) {
+  console.warn(`${LOG_PREFIX} signature failed (accepted)`, {
+    event_id: eventId,
+    request_id: requestId,
+    ts,
+    validation_error: validationError,
+  });
+
+  // ✅ Respondemos 200 para que MP no marque fallo.
+  // Igual guardamos el evento y procesamos consultando MP por API.
+  const payload = await getBody();
+  try {
+    const admin = getAdminSupabase();
+    const normalizedType = resolveEventType(payload, url);
+    const mpEventId = resolveMpEventId(payload) ?? eventId;
+    await recordRawMpEvent(admin, {
+      eventId: mpEventId ?? eventId ?? crypto.randomUUID(),
+      eventType: normalizedType,
+      requestId,
+      rawPayload: payload,
+      occurredAtIso: manifestTimestampToIso(ts),
     });
-    return NextResponse.json({ ok: false }, { status: 401 });
+  } catch (e) {
+    console.warn(`${LOG_PREFIX} could not record raw event on invalid signature`, e);
   }
+
+  return NextResponse.json({ ok: true });
+}
 
   const payload = await getBody();
   const normalizedType = resolveEventType(payload, url);

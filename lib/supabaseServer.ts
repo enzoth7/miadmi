@@ -26,29 +26,11 @@ async function createClient(accessToken?: string): Promise<ServerClient> {
         if (typeof value === "string") return value;
         return value?.value;
       },
-      set(name, value, options: CookieOptions) {
-        if (!cookieStore || typeof (cookieStore as any).set !== "function") {
-          return;
-        }
-
-        const opts = { sameSite: "lax", ...options };
-        try {
-          (cookieStore as any).set({ name, value, ...opts });
-        } catch {
-          (cookieStore as any).set(name, value, opts);
-        }
+      set() {
+        // Server components cannot modify cookies in Next.js 15 without a route handler
       },
-      remove(name, options: CookieOptions) {
-        if (!cookieStore || typeof (cookieStore as any).set !== "function") {
-          return;
-        }
-
-        const opts = { sameSite: "lax", ...options, maxAge: 0 };
-        try {
-          (cookieStore as any).set({ name, value: "", ...opts });
-        } catch {
-          (cookieStore as any).set(name, "", opts);
-        }
+      remove() {
+        // No-op: we are not modifying cookies from this context
       },
     },
     global: accessToken
