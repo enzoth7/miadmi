@@ -40,4 +40,19 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+
+# backups / temporales
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.orig
+
+# logs extra
+*.log
+
+# IDEs (opcional pero recomendado)
+.vscode/
+.idea/
