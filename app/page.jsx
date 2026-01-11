@@ -23,6 +23,23 @@ const STEPS = [
   },
 ];
 
+const QUICK_TOOLS = [
+  {
+    title: "Calculá tu sueldo, aguinaldo y más",
+    description:
+      "Herramientas puntuales para sacarte dudas en segundos. Actualizado a las últimas leyes y deducciones.",
+    href: "/herramientas",
+    cta: "Ver herramientas",
+  },
+  {
+    title: "Mirá tu fin de mes en 30 segundos",
+    description:
+      "Respondé cinco preguntas y obtené una estimación orientativa de cómo terminás el mes.",
+    href: "/estima-tu-mes",
+    cta: "Estimar mi mes",
+  },
+] 
+
 const FEATURE_CARDS = [
   {
     title: "Estimación mes a mes",
@@ -68,13 +85,13 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      "Mi Admi me ordenó ingresos, aportes y aguinaldo en un solo lugar. Es mucho más simple que Excel.",
+      "Mi Admi me ordenó pasado, presente y futuro en un solo lugar. Es mucho más simple que Excel.",
     name: "Cristian",
     role: "Co-fundador de JMF",
   },
   {
     quote:
-      "Lo que más valoro es que pago una sola vez y sé que la herramienta queda para siempre.",
+      "Puedo calcular rápido mi sueldo y finanzas en segundos, me ahorra mucho tiempo.",
     name: "Joaquín",
     role: "Analista en finanzas",
   },
@@ -179,6 +196,45 @@ export default function LandingPage() {
             ))}
           </div>
         </section>
+
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
+          Sin registrarte
+        </p>
+        <h2 className="text-3xl font-semibold">Probá ahora</h2>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {QUICK_TOOLS.map((item) => (
+          <article
+            key={item.href}
+            className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg shadow-black/10"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/60">
+              {item.label}
+            </p>
+
+            <h3 className="mt-2 text-2xl font-semibold">{item.title}</h3>
+            <p className="mt-2 text-base text-white/70">{item.description}</p>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={item.href}
+                className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+              >
+                {item.cta}
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <p className="text-sm text-white/60">
+        * Estas herramientas son estimaciones orientativas.
+      </p>
+    </section>
+
 
         <section className="space-y-6">
           <div className="space-y-2">

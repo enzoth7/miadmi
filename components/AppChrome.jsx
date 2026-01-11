@@ -42,6 +42,8 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/cookies",
   "/faq",
   "/bloqueos",
+  "/estima-tu-mes",
+  "/herramientas",
 ];
 
 function isPublicRoute(pathname) {

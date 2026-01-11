@@ -15,6 +15,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/sobre-nosotros",
     "/status",
     "/terminos-condiciones",
+    "/estima-tu-mes",
+    "/herramientas",
+    "/herramientas/aguinaldo",
+    "/herramientas/calcular-descuentos-salarios",
+    "/herramientas/seguro-desempleo",
   ];
 
   const now = new Date();

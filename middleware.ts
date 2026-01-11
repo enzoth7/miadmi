@@ -15,6 +15,8 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/faq",
   "/bloqueos",
   "/paywall",
+  "/estima-tu-mes",
+  "/herramientas",
 ];
 
 const PREMIUM_ROUTE_PREFIXES = ["/premium", "/export"];
