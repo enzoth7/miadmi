@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HerramientasOnboardingTour } from "../../components/onboarding/HerramientasOnboardingTour";
 
+export const metadata = {
+  title: "Herramientas financieras para Uruguay | Mi Admi",
+  description: "Calculadoras simples: aguinaldo, descuentos de sueldo, seguro de desempleo, despido y renuncia y más.",
+};
+
 const tools = [
    {
     id: "salario",

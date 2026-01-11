@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 
+export const metadata = {
+  title: "Seguro de desempleo del BPS en Uruguay | Mi Admi",
+  description: "Estimá cuánto podrías cobrar de seguro de desempleo en Uruguay con una calculadora simple. Fijate si te corresponde el seguro del BPS",
+};
+
 type MotivoEgreso = "involuntario" | "renuncia";
 type TipoSueldo = "fijo" | "variable";
 

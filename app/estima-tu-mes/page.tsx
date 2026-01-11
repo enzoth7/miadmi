@@ -1,8 +1,8 @@
 ﻿import EstimaTuMesClient from './EstimaTuMesClient';
 
 export const metadata = {
-  title: 'Estim\u00e1 tu mes en 30 segundos | Mi Admi',
-  description: 'Herramienta p\u00fablica para estimar tu mes con preguntas simples (Uruguay).',
+  title: 'Estimá tu mes en 30 segundos | Mi Admi',
+  description: 'Respondé 5 preguntas y obtené una estimación orientativa de gastos y saldo mensual en Uruguay.',
 };
 
 export default function EstimaTuMesPage() {

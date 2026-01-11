@@ -10,7 +10,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/contacto",
     "/cookies",
     "/faq",
-    "/login",
     "/politica-de-privacidad",
     "/sobre-nosotros",
     "/status",
@@ -24,10 +23,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const now = new Date();
 
-  return paths.map((path) => ({
-    url: `${baseUrl}${path}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: path === "/" ? 1 : 0.7,
-  }));
+return paths.map((path) => ({
+  url: `${baseUrl}${path}`,
+  changeFrequency: "weekly",
+  priority: path === "/" ? 1 : 0.7,
+}));
 }

@@ -5,6 +5,14 @@ import { supabaseBrowser } from "../../../lib/supabaseBrowser";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionInfo } from "../../../components/SessionProvider";
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
+
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();

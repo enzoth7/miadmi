@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { AguinaldoOnboardingTour } from "../../../components/onboarding/AguinaldoOnboardingTour";
 
+export const metadata = {
+  title: "Calcular aguinaldo en Uruguay | Mi Admi",
+  description: "Calculá tu aguinaldo en Uruguay en segundos. Estimación simple y clara para trabajadores.",
+};
+
 export default function AguinaldoPage() {
   const [modo, setModo] = useState<"fijo" | "variable">("fijo");
   const [sueldoMensual, setSueldoMensual] = useState<string>("");
