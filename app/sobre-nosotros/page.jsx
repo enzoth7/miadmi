@@ -1,7 +1,15 @@
+export const metadata = {
+  title: "Sobre nosotros | Mi Admi",
+  description: "Mi Admi es una app uruguaya para organizar tus finanzas personales de forma clara y para todo público.",
+};
+
+
 export default function SobreNosotrosPage() {
 
   const IG_URL = "https://instagram.com/miadmiuy";
 const LINKEDIN_URL = "https://www.linkedin.com/company/miadmi"; // o tu perfil
+
+
 
 function InstagramIcon(props) {
   return (
