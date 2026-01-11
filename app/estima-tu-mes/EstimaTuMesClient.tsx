@@ -474,7 +474,7 @@ const renderStepByIndex = (currentStep: number) => {
                 {'Si quer\u00e9s llevar tu mes con m\u00e1s claridad y seguimiento, probá Mi Admi.'}
               </p>
               <a
-  href='/login'
+  href='/login?mode=signup'
   className='mt-3 block w-full rounded-full bg-emerald-400 px-4 py-2 text-center text-sm font-semibold text-slate-900 hover:bg-emerald-300'
 >
   Empezar gratis

@@ -59,8 +59,10 @@ export default function AppChrome({ children }) {
   const { user } = useSessionInfo();
   const isLanding = pathname === "/";
   const isPublic = isPublicRoute(pathname);
-  const showInternalChrome = Boolean(user) && (!isPublic || isLanding);
-  const shouldMountInactivityGuard = Boolean(user) && !isPublic;
+  const isTools = pathname === "/herramientas" || pathname.startsWith("/herramientas/");
+  const showInternalChrome = Boolean(user) && (!isPublic || isLanding || isTools);
+  const shouldMountInactivityGuard = Boolean(user) && !isPublic && !isTools;
+
 
   const currentPath = useMemo(() => {
     const query = searchParams?.toString();
