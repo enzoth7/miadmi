@@ -2,11 +2,6 @@
 
 import { useState } from "react";
 
-export const metadata = {
-  title: "Calculadora de descuentos de sueldo en Uruguay | Mi Admi",
-  description: "Mirá cuanto te descuentan y tu salario líquido en Uruguay. Resultado orientativo y fácil de entender.",
-};
-
 type TipoTrabajador = "industria" | "jornalero";
 type TipoPago = "mensual" | "jornal";
 type SituacionFonasa =
