@@ -70,12 +70,29 @@ export function SessionProvider({ children }) {
     }
   }, [supabase, fetchSessionAndPlan]);
 
+const ensureProfile = useCallback(async () => {
+  try {
+    const res = await fetch("/api/profile/ensure", { method: "POST" });
+    await res.text().catch(() => {});
+  } catch {
+    // noop
+  }
+}, []);
+
+
+
+
+
   useEffect(() => {
     fetchSessionAndPlan();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_IN") {
+        await ensureProfile();
+      }
       fetchSessionAndPlan();
     });
+
 
     // ✅ mobile: cuando volvés a la app, refrescá tokens
     const onFocus = () => refreshOnReturn();
@@ -91,7 +108,7 @@ export function SessionProvider({ children }) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [supabase, fetchSessionAndPlan, refreshOnReturn]);
+  }, [supabase, fetchSessionAndPlan, refreshOnReturn, ensureProfile]);
 
   const value = useMemo(
     () => ({

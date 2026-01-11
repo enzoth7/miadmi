@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 const PUBLIC_ROUTE_PREFIXES = [
   "/",
   "/login",
+  "/auth",
   "/como-funciona",
   "/sobre-nosotros",
   "/contacto",

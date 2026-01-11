@@ -39,6 +39,34 @@ function LoginPageContent() {
     }
   }, [sessionLoading, user, router, redirectDestination]);
 
+async function signInWithGoogle() {
+  setBusy(true);
+  setErr("");
+  try {
+    // Guardamos el destino post-login en una cookie simple (válida para el callback server)
+    document.cookie = `post_auth_redirect=${encodeURIComponent(
+      redirectDestination
+    )}; path=/; samesite=lax`;
+
+    const redirectTo = `${window.location.origin}/auth/callback`;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+
+    if (error) throw error;
+  } catch (e: any) {
+    setErr(e?.message || "Error");
+    setBusy(false);
+  }
+}
+
+
+
+
+
+
 async function onSubmit(e) {
   e.preventDefault();
   setBusy(true);
@@ -97,6 +125,32 @@ if (accessToken) {
           Tu sesión se cerró por inactividad. Volvé a ingresar para continuar.
         </div>
       ) : null}
+
+<button
+  type="button"
+  onClick={signInWithGoogle}
+  disabled={busy}
+  className="w-full rounded-lg border bg-white py-2 hover:bg-gray-50 disabled:opacity-60"
+>
+  <span className="relative flex w-full items-center justify-center">
+    <img
+      src="/google-logo.png"
+      alt=""
+      className="absolute left-4 h-5 w-5"
+    />
+    <span>Continuar con Google</span>
+  </span>
+</button>
+
+
+
+<div className="flex items-center gap-3">
+  <div className="h-px flex-1 bg-gray-200" />
+  <span className="text-xs text-gray-500">o</span>
+  <div className="h-px flex-1 bg-gray-200" />
+</div>
+
+
 
       <form onSubmit={onSubmit} className="space-y-3">
         <div>

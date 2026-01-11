@@ -705,7 +705,7 @@ useEffect(() => {
               onClick={logout}
               className="rounded-lg border bg-rose-600 px-3 py-1.5 text-white"
             >
-              Log out
+              Cerrar sesión
             </button>
           </div>
         </header>
