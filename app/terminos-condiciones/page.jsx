@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Terminos y condiciones - Mi Admi",
+  title: "Términos y condiciones | Mi Admi",
+  description: "Condiciones de uso de la plataforma Mi Admi.",
 };
 
 const linkClass =

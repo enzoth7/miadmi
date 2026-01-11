@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Preguntas frecuentes - Mi Admi",
+  title: "Preguntas frecuentes | Mi Admi",
+  description: "Respondemos las dudas más comunes sobre Mi Admi, seguridad, uso y funcionamiento de la app.",
 };
+
 
 const linkClass =
   "font-semibold text-emerald-200 underline decoration-dotted underline-offset-4 hover:text-emerald-100";
