@@ -9,7 +9,7 @@ import InstallPWAButton from "./components/InstallPWAButton";
 
 
 export const metadata = {
-  title: "Mi Admi | Finanzas personales para uruguayos",
+  title: "Finanzas personales para Uruguay | Mi Admi",
   description:
     "Ordená tus finanzas en sin ser experto. Registrá gastos, estimá tu próximo mes y tomá mejores decisiones con Mi Admi.",
 };
