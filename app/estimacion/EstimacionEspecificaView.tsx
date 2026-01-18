@@ -1142,11 +1142,13 @@ const totalIngresos = useMemo(
       }
       const ctx = await ensureSupabaseCtx();
       if (ctx.supabase && ctx.userId) {
-        const newId = await upsertEstimacionEspecifica(ctx.supabase, ctx.userId, {
-          id: snapshot.id,
-          ingresos: snapshot.ingresos,
-          egresos: snapshot.egresos,
-        });
+  const newId = await upsertEstimacionEspecifica(ctx.supabase, ctx.userId, {
+  id: snapshot.id,
+  ingresos: snapshot.ingresos,
+  egresos: snapshot.egresos,
+  saldo_inicial: snapshot.saldoInicial,
+});
+
         setRecordId(newId ?? snapshot.id ?? null);
       }
       setDirty(false);

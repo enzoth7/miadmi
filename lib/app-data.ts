@@ -443,6 +443,7 @@ export async function upsertEstimacionEspecifica(
     id?: string | null;
     ingresos: any;
     egresos: any;
+    saldo_inicial?: number;
     projection?: any;
     projection_anchor?: string | null;
     ahorro_mensual?: number | null;
