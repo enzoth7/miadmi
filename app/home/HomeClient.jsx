@@ -1,26 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import {
   TrendingUp,
   TrendingDown,
-  CheckCircle2,
   Lightbulb,
 } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 import { LS_CUSTOM_CATEGORIES } from "../estimacion/especifica/constants";
-import {
-  getSupabaseSession,
-  fetchEstimacionGeneral,
-  fetchEstimacionEspecifica,
-  fetchEgresosEstimables,
-  fetchEstimationMode,
-  DEFAULT_ESTIMATION_MODE,
-} from "../../lib/app-data";
+import { useHomeData } from "./useHomeData";
+import { useCustomCategoryLabels } from "./useCustomCategoryLabels";
+import { toNumber } from "./homeNumbers";
+import { normalizeEspecifica, normalizeGeneral, hasMeaningfulData } from "./homeNormalize";
+import { calculateTotals } from "./homeCalculations";
+import { buildConsejos } from "./homeConsejos";
 
 
 
@@ -78,33 +75,6 @@ const SPECIFIC_EXPENSE_LABELS = {
   tarjetas: "Tarjetas",
 };
 
-const n = (v) => {
-  if (v == null) return 0;
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-
-  let s = String(v).trim();
-  if (!s) return 0;
-
-  s = s.replace(/\s+/g, "");
-  s = s.replace(/[^\d,.-]/g, "");
-
-  const hasComma = s.includes(",");
-  const hasDot = s.includes(".");
-
-  if (hasComma && hasDot) {
-    // assume "." thousands and "," decimals
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (hasComma && !hasDot) {
-    s = s.replace(",", ".");
-  } else {
-    // only dots or plain number -> keep
-  }
-
-  const x = Number(s);
-  return Number.isFinite(x) ? x : 0;
-};
-
-
 const fmtUYU = (v, maxFrac = 0) =>
   new Intl.NumberFormat("es-UY", {
     style: "currency",
@@ -112,180 +82,14 @@ const fmtUYU = (v, maxFrac = 0) =>
     maximumFractionDigits: maxFrac,
   }).format(v || 0);
 
-function sumArrayMonto(arr) {
-  if (!Array.isArray(arr)) return 0;
-  return arr.reduce((a, it) => a + n(it?.monto), 0);
-}
-
-function flattenNumericObject(obj, dictionary, kindLabel) {
-  if (!obj || typeof obj !== "object") return [];
-  const out = [];
-  for (const [k, v] of Object.entries(obj)) {
-    const val = n(v);
-    if (val > 0) {
-      out.push({
-        name: resolveCategoryLabel(k, dictionary),
-        value: val,
-        kind: kindLabel,
-      });
-    }
-  }
-  return out;
-}
-
-function titleCase(s) {
-  try {
-    return String(s)
-      .replace(/[_-]+/g, " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (m) => m.toUpperCase());
-  } catch {
-    return String(s || "");
-  }
-}
-
-function stripAccents(s) {
-  try {
-    return String(s || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-  } catch {
-    return String(s || "").toLowerCase();
-  }
-}
-
-function normalizeKey(value) {
-  return stripAccents(String(value || "")).replace(/[^a-z0-9]/g, "");
-}
-
-function resolveCategoryLabel(raw, dictionary) {
-  if (dictionary) {
-    const normalized = normalizeKey(raw);
-    if (dictionary[normalized]) return dictionary[normalized];
-  }
-  if (typeof raw === "string" && raw.trim()) {
-    return titleCase(raw);
-  }
-  return "Sin nombre";
-}
-
-function resolveFromDictionary(value, dictionary) {
-  if (!value) return null;
-
-  const raw = String(value).trim();
-  const normalized = normalizeKey(raw);
-
-  return (
-    dictionary?.[raw] ||
-    dictionary?.[raw.toLowerCase()] ||
-    dictionary?.[normalized] ||
-    null
-  );
-}
-
-
-
-
-
-
-
-const createEmptyCategoryDictionary = () => ({ ingresos: {}, egresos: {} });
-
-const buildCustomCategoryMap = (entries) => {
-  const map = {};
-  if (!Array.isArray(entries)) return map;
-
-  entries.forEach((entry) => {
-    if (!entry || typeof entry !== "object") return;
-
-    const label = String(entry?.label ?? entry?.nombre ?? "").trim();
-    if (!label) return;
-
-    const source = String(entry?.id ?? label).trim() || label;
-
-    const rawKey = source;
-    const lowerKey = source.toLowerCase();
-    const normalizedKey = normalizeKey(source);
-
-    map[rawKey] = label;
-    map[lowerKey] = label;
-    if (normalizedKey) map[normalizedKey] = label;
-  });
-
-  return map;
-};
-
-
-const normalizeCustomCategoryPayload = (payload) => {
-  if (!payload || typeof payload !== "object") {
-    return createEmptyCategoryDictionary();
-  }
-  return {
-    ingresos: buildCustomCategoryMap(payload.ingresos),
-    egresos: buildCustomCategoryMap(payload.egresos),
-  };
-};
-
-const readCustomCategoriesFromStorage = () => {
-  if (typeof window === "undefined") {
-    return createEmptyCategoryDictionary();
-  }
-  try {
-    const raw = window.localStorage.getItem(LS_CUSTOM_CATEGORIES);
-    if (!raw) return createEmptyCategoryDictionary();
-    const parsed = JSON.parse(raw);
-    return normalizeCustomCategoryPayload(parsed);
-  } catch {
-    return createEmptyCategoryDictionary();
-  }
-};
-
-const shallowEqualMap = (a = {}, b = {}) => {
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) return false;
-  return aKeys.every((key) => b[key] === a[key]);
-};
-
-const areCustomDictionariesEqual = (a, b) =>
-  shallowEqualMap(a?.ingresos ?? {}, b?.ingresos ?? {}) &&
-  shallowEqualMap(a?.egresos ?? {}, b?.egresos ?? {});
-
 export default function HomeClient() {
   const router = useRouter();
-  const pathname = usePathname();
   const supabase = useMemo(() => supabaseBrowser(), []);
   const verifyRef = useRef(false);
 
-  const [general, setGeneral] = useState(null);
-  const [especifica, setEspecifica] = useState(null);
-  const [activeMode, setActiveMode] = useState("general");
-const especificaActiva = useMemo(() => {
-  if (!especifica) return false;
+  const { general, especifica, estimables, activeMode } = useHomeData(supabase);
+  const customCategoryLabels = useCustomCategoryLabels(LS_CUSTOM_CATEGORIES);
 
-  // ingresos: array o objeto
-  if (Array.isArray(especifica.ingresos) && especifica.ingresos.length > 0) return true;
-  if (especifica.ingresos && typeof especifica.ingresos === "object") {
-    if (flattenNumericObject(especifica.ingresos).some((it) => it.value > 0)) return true;
-  }
-
-  // egresos: array o objeto
-  if (Array.isArray(especifica.egresos) && especifica.egresos.length > 0) return true;
-  if (especifica.egresos && typeof especifica.egresos === "object") {
-    if (flattenNumericObject(especifica.egresos).some((it) => it.value > 0)) return true;
-  }
-
-  // fallback: saldoInicial / ahorroMensual también cuentan como "hay específica"
-  if (n(especifica.saldoInicial ?? especifica.saldo_inicial) !== 0) return true;
-  if (n(especifica.ahorroMensual ?? especifica.ahorro_mensual ?? especifica.ahorroDeseado) !== 0) return true;
-
-  return false;
-}, [especifica]);
-
-
-  const [estimables, setEstimables] = useState({ prestamos: [], tarjetas: [], compras: [] });
-  const [customCategoryLabels, setCustomCategoryLabels] = useState(() => createEmptyCategoryDictionary());
   const [showTour, setShowTour] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const activeStep = showTour ? TOUR_STEPS.find((step) => step.id === currentStep) : null;
@@ -301,11 +105,6 @@ const especificaActiva = useMemo(() => {
     }
   }, [showTour, activeTarget]);
 
-  const syncCustomCategoryLabels = useCallback(() => {
-    const next = readCustomCategoriesFromStorage();
-    setCustomCategoryLabels((prev) => (areCustomDictionariesEqual(prev, next) ? prev : next));
-  }, []);
-
   const incomeLabelDictionary = useMemo(
     () => ({ ...SPECIFIC_INCOME_LABELS, ...customCategoryLabels.ingresos }),
     [customCategoryLabels.ingresos]
@@ -315,60 +114,100 @@ const especificaActiva = useMemo(() => {
     [customCategoryLabels.egresos]
   );
 
-const readAll = useCallback(async () => {
-  syncCustomCategoryLabels();
+  const generalNormalized = useMemo(
+    () =>
+      normalizeGeneral(general, {
+        incomeLabels: incomeLabelDictionary,
+        expenseLabels: expenseLabelDictionary,
+      }),
+    [general, incomeLabelDictionary, expenseLabelDictionary]
+  );
+  const especificaNormalized = useMemo(
+    () =>
+      normalizeEspecifica(especifica, {
+        incomeLabels: incomeLabelDictionary,
+        expenseLabels: expenseLabelDictionary,
+      }),
+    [especifica, incomeLabelDictionary, expenseLabelDictionary]
+  );
 
-  try {
-    const { userId } = await getSupabaseSession();
+  const includeGeneral = activeMode === "general";
+  const activeModeLabel = includeGeneral ? "Simple" : "Avanzado";
+  const activeNormalized = includeGeneral ? generalNormalized : especificaNormalized;
 
-    if (!userId) {
-      setGeneral(null);
-      setEspecifica(null);
-      setEstimables({ prestamos: [], tarjetas: [], compras: [] });
-      setActiveMode(DEFAULT_ESTIMATION_MODE);
-      return;
-    }
+  const totals = useMemo(() => calculateTotals(activeNormalized), [activeNormalized]);
+  const ingresosTotales = totals.ingresosTotales;
+  const egresosTotales = totals.egresosTotales;
+  const resultado = totals.resultado;
+  const capacidadMensual = totals.capacidadMensual;
+  const saldoProyectado = totals.saldoProyectado;
 
-    const [g, e, est, mode] = await Promise.all([
-      fetchEstimacionGeneral(supabase, userId),
-      fetchEstimacionEspecifica(supabase, userId),
-      fetchEgresosEstimables(supabase, userId),
-      fetchEstimationMode(supabase, userId),
-    ]);
+  const graficoIngresos = activeNormalized.ingresosPorCategoria;
+  const graficoEgresos = activeNormalized.egresosPorCategoria;
 
-    const resolvedMode =
-      mode === "especifica" || mode === "general" ? mode : DEFAULT_ESTIMATION_MODE;
+  const gastoSobreIngreso =
+    ingresosTotales > 0
+      ? Math.round((egresosTotales / ingresosTotales) * 100)
+      : null;
 
-    setGeneral(g ?? null);
-    setEspecifica(e ?? null);
-    setEstimables(est ?? { prestamos: [], tarjetas: [], compras: [] });
-    setActiveMode(resolvedMode);
-  } catch (error) {
-    console.error("[HOME] fetch failed", error);
-    setGeneral(null);
-    setEspecifica(null);
-    setEstimables({ prestamos: [], tarjetas: [], compras: [] });
-    setActiveMode(DEFAULT_ESTIMATION_MODE);
-  }
-}, [supabase, syncCustomCategoryLabels]);
+  const totalPrestamos = Array.isArray(estimables?.prestamos)
+    ? estimables.prestamos.reduce((acc, it) => acc + toNumber(it?.montoCuota), 0)
+    : 0;
 
+  const totalTarjetas = Array.isArray(estimables?.tarjetas)
+    ? estimables.tarjetas.reduce((acc, it) => acc + toNumber(it?.montoCuota), 0)
+    : 0;
 
-const handleRefresh = useCallback(() => {
-  void readAll();
-}, [readAll]);
+  const totalCompras = Array.isArray(estimables?.compras)
+    ? estimables.compras.reduce((acc, it) => acc + toNumber(it?.valor), 0)
+    : 0;
 
-const handleVisibility = useCallback(() => {
-  if (document.visibilityState === "visible") {
-    handleRefresh();
-  }
-}, [handleRefresh]);
+  const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
 
+  const tieneGeneral = useMemo(
+    () => hasMeaningfulData(generalNormalized),
+    [generalNormalized]
+  );
+  const tieneEspecifica = useMemo(
+    () => hasMeaningfulData(especificaNormalized),
+    [especificaNormalized]
+  );
 
-
-
-
-
-
+  const consejos = useMemo(
+    () =>
+      buildConsejos({
+        totals,
+        activeNormalized,
+        generalNormalized,
+        especificaNormalized,
+        includeGeneral,
+        activeModeLabel,
+        graficoIngresos,
+        graficoEgresos,
+        totalPrestamos,
+        totalTarjetas,
+        totalCompras,
+        totalEstimables,
+        tieneGeneral,
+        tieneEspecifica,
+      }),
+    [
+      totals,
+      activeNormalized,
+      generalNormalized,
+      especificaNormalized,
+      includeGeneral,
+      activeModeLabel,
+      graficoIngresos,
+      graficoEgresos,
+      totalPrestamos,
+      totalTarjetas,
+      totalCompras,
+      totalEstimables,
+      tieneGeneral,
+      tieneEspecifica,
+    ]
+  );
 
   useEffect(() => {
     const key = "miadmi:onboarding-tour";
@@ -421,300 +260,6 @@ const handleVisibility = useCallback(() => {
       }
     })();
   }, [router, supabase]);
-
-  useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  // primera carga al entrar a Home
-  handleRefresh();
-
-  window.addEventListener("focus", handleRefresh);
-  window.addEventListener("miadmi:data-updated", handleRefresh);
-  document.addEventListener("visibilitychange", handleVisibility);
-
-  return () => {
-    window.removeEventListener("focus", handleRefresh);
-    window.removeEventListener("miadmi:data-updated", handleRefresh);
-    document.removeEventListener("visibilitychange", handleVisibility);
-  };
-}, [handleRefresh, handleVisibility, pathname]);
-
-
-const sueldosGen = useMemo(
-  () =>
-    n(
-      general?.sueldos ??
-        general?.sueldo ??
-        general?.ingresos ??
-        general?.ingreso
-    ),
-  [general]
-);
-
-const otrosIngresosGen = useMemo(
-  () =>
-    n(
-      general?.otrosIngresos ??
-        general?.otros_ingresos ??
-        general?.otros ??
-        general?.extra ??
-        general?.extras
-    ),
-  [general]
-);
-
-const ingresosGen = sueldosGen + otrosIngresosGen;
-
-const egresosGen = useMemo(() => {
-  const eg = general?.egresos;
-
-  if (Array.isArray(eg)) {
-    return eg.reduce((acc, it) => acc + n(it?.monto), 0);
-  }
-
-  if (eg && typeof eg === "object") {
-    return Object.values(eg).reduce((acc, v) => acc + n(v?.monto ?? v), 0);
-  }
-
-  return 0;
-}, [general]);
-
-
-  const ingresosEsp = useMemo(() => {
-    if (!especifica) return 0;
-    if (Array.isArray(especifica.ingresos)) return sumArrayMonto(especifica.ingresos);
-    if (especifica.ingresos && typeof especifica.ingresos === "object") {
-      return flattenNumericObject(especifica.ingresos).reduce((a, it) => a + it.value, 0);
-    }
-    return 0;
-  }, [especifica]);
-
-  const egresosEsp = useMemo(() => {
-    if (!especifica) return 0;
-    if (Array.isArray(especifica.egresos)) return sumArrayMonto(especifica.egresos);
-    if (especifica.egresos && typeof especifica.egresos === "object") {
-      return flattenNumericObject(especifica.egresos).reduce((a, it) => a + it.value, 0);
-    }
-    return 0;
-  }, [especifica]);
-
-const includeGeneral = activeMode === "general";
-const activeModeLabel = includeGeneral ? "Simple" : "Avanzado";
-
-const saldoInicial = includeGeneral
-  ? n(general?.saldoInicial ?? general?.saldo_inicial)
-  : n(especifica?.saldoInicial ?? especifica?.saldo_inicial);
-
-const ingresosBase = includeGeneral ? ingresosGen : ingresosEsp;
-const egresosBase = includeGeneral ? egresosGen : egresosEsp;
-
-const ingresosTotales = saldoInicial + ingresosBase;
-const egresosTotales = egresosBase;
-
-const ahorroDeseado = includeGeneral
-  ? n(general?.ahorroDeseado ?? general?.ahorro_deseado)
-  : n(especifica?.ahorroMensual ?? especifica?.ahorro_mensual ?? especifica?.ahorroDeseado);
-
-const resultado = saldoInicial + ingresosBase - egresosBase;
-const capacidadMensual = resultado - ahorroDeseado;
-const saldoProyectado = resultado;
-
-
-const gastoSobreIngreso = ingresosTotales > 0 ? Math.round((egresosTotales / ingresosTotales) * 100) : null;
-const totalPrestamos = Array.isArray(estimables?.prestamos)
-  ? estimables.prestamos.reduce((acc, it) => acc + n(it?.montoCuota), 0)
-  : 0;
-
-const totalTarjetas = Array.isArray(estimables?.tarjetas)
-  ? estimables.tarjetas.reduce((acc, it) => acc + n(it?.montoCuota), 0)
-  : 0;
-
-const totalCompras = Array.isArray(estimables?.compras)
-  ? estimables.compras.reduce((acc, it) => acc + n(it?.valor), 0)
-  : 0;
-
-const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
-
-  const graficoEgresos = useMemo(() => {
-    if (includeGeneral) {
-      const eg = general?.egresos;
-      if (Array.isArray(eg)) {
-        return eg
-          .filter((it) => n(it?.monto) > 0)
-          .map((it) => ({
-            name:
-              resolveFromDictionary(it?.nombre, expenseLabelDictionary) ||
-              resolveFromDictionary(it?.categoria, expenseLabelDictionary) ||
-              resolveFromDictionary(it?.id, expenseLabelDictionary) ||
-              String(it?.nombre || it?.categoria || "Sin nombre"),
-            value: n(it?.monto),
-          }));
-      }
-      if (eg && typeof eg === "object") {
-        return flattenNumericObject(eg, expenseLabelDictionary, "general");
-      }
-      return [];
-    }
-    if (!especifica) return [];
-    if (Array.isArray(especifica.egresos)) {
-      return especifica.egresos
-        .filter((it) => n(it?.monto) > 0)
-        .map((it) => ({
-          name:
-            resolveFromDictionary(it?.id, expenseLabelDictionary) ||
-            resolveFromDictionary(it?.categoria, expenseLabelDictionary) ||
-            resolveFromDictionary(it?.nombre, expenseLabelDictionary) ||
-            String(it?.nombre || it?.categoria || "Sin nombre"),
-          value: n(it?.monto),
-        }));
-    }
-    if (especifica.egresos && typeof especifica.egresos === "object") {
-      return flattenNumericObject(especifica.egresos, expenseLabelDictionary, "especifica");
-    }
-    return [];
-  }, [general, especifica, includeGeneral, expenseLabelDictionary]);
-
-  const graficoIngresos = useMemo(() => {
-    if (includeGeneral) {
-      const base = [];
-      if (sueldosGen > 0)
-        base.push({ name: "Sueldos / Honorarios", value: sueldosGen });
-      if (otrosIngresosGen > 0)
-        base.push({ name: "Otros ingresos", value: otrosIngresosGen });
-      return base;
-    }
-    if (!especifica) return [];
-    if (Array.isArray(especifica.ingresos)) {
-      return especifica.ingresos
-        .filter((it) => n(it?.monto) > 0)
-        .map((it) => ({
-          name:
-            resolveFromDictionary(it?.id, incomeLabelDictionary) ||
-            resolveFromDictionary(it?.categoria, incomeLabelDictionary) ||
-            resolveFromDictionary(it?.nombre, incomeLabelDictionary) ||
-            String(it?.nombre || it?.categoria || "Sin nombre"),
-          value: n(it?.monto),
-        }));
-    }
-    if (especifica.ingresos && typeof especifica.ingresos === "object") {
-      return flattenNumericObject(especifica.ingresos, incomeLabelDictionary, "especifica");
-    }
-    return [];
-  }, [general, especifica, includeGeneral, incomeLabelDictionary, sueldosGen, otrosIngresosGen]);
-
-  const consejos = useMemo(() => {
-    const ctx = {
-      ingresosTotales,
-      egresosTotales,
-      resultado,
-      ahorroDeseado,
-      capacidadMensual,
-      saldoInicial,
-      saldoProyectado,
-      includeGeneral,
-      especificaActiva,
-      tieneGeneral: Boolean(general),
-      tieneEspecifica: Boolean(especifica),
-      graficoIngresos,
-      graficoEgresos,
-      totalPrestamos,
-      totalTarjetas,
-      totalCompras,
-      totalEstimables,
-      ingresosGen,
-      ingresosEsp,
-      egresosGen,
-      egresosEsp,
-      activeModeLabel,
-    };
-
-    const tipCatalog = [
-      // Faltan datos básicos
-      { check: (c) => c.ingresosTotales === 0 && c.egresosTotales === 0, message: "Cargá tus ingresos y egresos para ver recomendaciones personalizadas." },
-      { check: (c) => c.ingresosTotales > 0 && c.egresosTotales === 0, message: "Agregá tus egresos recurrentes para medir el impacto real de tus ingresos." },
-      { check: (c) => c.ingresosTotales === 0 && c.egresosTotales > 0, message: "Registrá tus ingresos para entender cuánto podés cubrir de los gastos actuales." },
-
-      // Situaciones críticas de flujo del mes
-      { check: (c) => c.resultado < 0, message: "Tus egresos superan a tus ingresos. Podés revisar rubros variables y, si hace falta, renegociar algunos gastos fijos." },
-      { check: (c) => c.saldoProyectado < 0, message: "Con la proyección actual podrías cerrar el mes en negativo. Revisá ingresos, gastos y ahorro deseado para corregirlo a tiempo." },
-      { check: (c) => c.ingresosTotales > 0 && c.egresosTotales >= c.ingresosTotales * 0.9, message: "Tus gastos consumen más del 90% del ingreso. Bajar algunos rubros variables puede darte un poco más de margen." },
-
-      // Deudas y compras grandes
-      { check: (c) => c.totalPrestamos > c.ingresosTotales * 0.3, message: "Las cuotas de préstamos superan el 30% del ingreso. Si sentís presión, podés evaluar alternativas para reorganizar esas deudas." },
-      { check: (c) => c.totalTarjetas > c.ingresosTotales * 0.3, message: "Las tarjetas y suscripciones consumen una parte importante del ingreso. Revisá qué servicios usás realmente y cuáles podrías pausar." },
-      { check: (c) => c.totalCompras > c.ingresosTotales * 0.5, message: "Las compras planificadas pesan casi la mitad del ingreso. Podés repartirlas en varios meses para que el impacto sea menor." },
-      { check: (c) => c.ingresosTotales > 0 && c.totalTarjetas > 0 && c.capacidadMensual <= 0, message: "Las tarjetas están reduciendo tu margen mensual. Revisá cuotas, montos y fechas para recuperar algo de aire." },
-      { check: (c) => c.capacidadMensual < 0 && c.totalPrestamos === 0 && c.totalTarjetas === 0, message: "El rojo proviene principalmente de gastos corrientes. Mirá tus consumos diarios para encontrar recortes posibles." },
-
-      // Margen, ahorro y saldo
-      { check: (c) => c.capacidadMensual > 0 && c.capacidadMensual <= c.ingresosTotales * 0.05, message: "Tu margen es menor al 5% del ingreso. Aumentar ingresos o bajar algunos gastos puede darte más respiro." },
-      { check: (c) => c.capacidadMensual > c.ingresosTotales * 0.4, message: "Podés guardar parte del margen mensual para objetivos de mediano plazo o, si lo ves conveniente, para futuras inversiones." },
-      { check: (c) => c.ahorroDeseado > c.ingresosTotales * 0.5 && c.ingresosTotales > 0, message: "El objetivo de ahorro supera la mitad de tu ingreso mensual. Revisá si es realista para tu situación actual." },
-      { check: (c) => c.ahorroDeseado === 0 && c.ingresosTotales > 0, message: "Definí un objetivo de ahorro mensual para aprovechar mejor tus ingresos." },
-      { check: (c) => c.capacidadMensual < 0 && c.ahorroDeseado > 0, message: "Si querés evitar terminar en rojo, podés ajustar el ahorro deseado o recortar algunos gastos por este mes." },
-      { check: (c) => c.saldoInicial < 0 && c.resultado > 0, message: "Buen dato: generás superávit y podrías ir saliendo del saldo negativo inicial si mantenés la tendencia." },
-      { check: (c) => c.saldoInicial > 0 && c.resultado < 0, message: "El saldo inicial ayuda a cubrir el rojo de este mes. Mirá si podés hacer ajustes para no depender siempre de ese colchón." },
-      { check: (c) => c.ingresosTotales > 0 && c.egresosTotales <= c.ingresosTotales * 0.5, message: "Gastás menos de la mitad de lo que ganás. Podés destinar una parte a ahorro, objetivos o inversiones futuras." },
-      { check: (c) => c.resultado === 0 && c.ingresosTotales > 0, message: "Estás en punto de equilibrio exacto. Un ajuste pequeño puede definir si el mes termina en superávit o déficit." },
-      { check: (c) => c.capacidadMensual > 0 && c.saldoProyectado > c.saldoInicial, message: "Tu saldo final crece este mes. Seguilo de cerca para mantener la tendencia." },
-      { check: (c) => c.capacidadMensual > 0 && c.totalPrestamos === 0 && c.totalTarjetas === 0, message: "No tenés deudas registradas. Podrías aprovechar el margen para armar un fondo de emergencia." },
-      { check: (c) => c.totalCompras > 0 && c.capacidadMensual > 0, message: "Reservá parte del margen para cubrir las compras planificadas sin endeudarte." },
-
-      // Estructura de ingresos y egresos
-      { check: (c) => c.graficoIngresos.length >= 6, message: "Tenés varias fuentes de ingreso. Mantenelas actualizadas para medir su peso real." },
-      { check: (c) => c.graficoIngresos.length === 1 && c.ingresosTotales > 0, message: "Dependés de una sola fuente de ingreso. A futuro podrías evaluar sumar otra para tener más estabilidad." },
-      { check: (c) => c.graficoEgresos.length >= 8, message: "Tus egresos están muy atomizados. Etiquetar bien las categorías ayuda a detectar los gastos que podés reducir." },
-      { check: (c) => c.graficoEgresos.length <= 2 && c.egresosTotales > 0, message: "La mayoría de tus gastos está concentrada en pocos rubros. Un ajuste puntual puede lograr mucho." },
-
-      // Consistencia entre modos y estimaciones
-      { check: (c) => !c.includeGeneral && c.totalEstimables === 0, message: "Activaste la estimación específica pero no cargaste préstamos ni compras estimables." },
-      { check: (c) => c.includeGeneral && c.tieneEspecifica, message: "Ya tenés datos específicos. Si querés usarlos en Home, activá ese modo desde las estimaciones." },
-      { check: (c) => !c.includeGeneral && c.tieneGeneral, message: "Recordá revisar la estimación general aunque hoy estés usando la específica." },
-      { check: (c) => c.ingresosGen > 0 && c.ingresosEsp > 0, message: "Tanto la estimación general como la específica tienen ingresos. Mantenelas consistentes para evitar confusiones." },
-      { check: (c) => c.egresosGen > 0 && c.egresosEsp === 0 && !c.includeGeneral, message: "No hay egresos en la estimación específica. Migrá tus datos antes de usar este modo como referencia principal." },
-      { check: (c) => c.egresosEsp > 0 && c.egresosGen === 0 && c.includeGeneral, message: "Solo cargaste egresos en la estimación específica. Activala para ver resultados más cercanos a tu realidad." },
-
-      // Casos de datos incompletos mezclados
-      { check: (c) => c.ingresosTotales > 0 && c.totalCompras > 0 && c.egresosTotales === 0, message: "Anotá tus egresos recurrentes para estimar cómo impactan esas compras próximas." },
-    ];
-
-    const tips = [];
-    tipCatalog.forEach((tip) => {
-      try {
-        if (tip.check(ctx)) tips.push(tip.message);
-      } catch {
-        // ignore faulty rule
-      }
-    });
-
-    if (tips.length === 0) {
-      tips.push("Todo en orden. Seguí registrando tus movimientos para mantener el control. Estas sugerencias son solo orientativas.");
-    }
-
-    return tips.slice(0, 5);
-  }, [
-    ingresosTotales,
-    egresosTotales,
-    resultado,
-    ahorroDeseado,
-    capacidadMensual,
-    saldoInicial,
-    saldoProyectado,
-    includeGeneral,
-    general,
-    especifica,
-    graficoIngresos,
-    graficoEgresos,
-    totalPrestamos,
-    totalTarjetas,
-    totalCompras,
-    totalEstimables,
-    ingresosGen,
-    ingresosEsp,
-    egresosGen,
-    egresosEsp,
-    activeModeLabel,
-  ]);
 
 const resumenCards = [
   {
