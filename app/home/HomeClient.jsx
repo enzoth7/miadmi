@@ -13,6 +13,8 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 import { LS_CUSTOM_CATEGORIES } from "../estimacion/especifica/constants";
+import { getSupabaseSession } from "../../lib/app-data";
+
 
 
 
@@ -264,17 +266,43 @@ export default function HomeClient() {
     [customCategoryLabels.egresos]
   );
 
+const [userId, setUserId] = useState(null);
+
+useEffect(() => {
+  let active = true;
+  (async () => {
+    try {
+      const ctx = await getSupabaseSession();
+      if (!active) return;
+      setUserId(ctx?.userId ?? null);
+    } catch {
+      setUserId(null);
+    }
+  })();
+  return () => {
+    active = false;
+  };
+}, []);
+
+
 
 const readAll = useCallback(() => {
+  if (!userId) {
+    setGeneral(null);
+    setEspecifica(null);
+    setEstimables({ prestamos: [], tarjetas: [], compras: [] });
+    return;
+  }
+
   try {
-    const rawG = localStorage.getItem(LS_GEN);
+    const rawG = localStorage.getItem(`miadmi:${userId}:estimacion_general`);
     setGeneral(rawG ? JSON.parse(rawG) : null);
   } catch {
     setGeneral(null);
   }
 
   try {
-    const rawE = localStorage.getItem(LS_ESP);
+    const rawE = localStorage.getItem(`miadmi:${userId}:estimacion_especifica`);
     setEspecifica(rawE ? JSON.parse(rawE) : null);
   } catch {
     setEspecifica(null);
@@ -288,7 +316,7 @@ const readAll = useCallback(() => {
   } catch {}
 
   try {
-    const rawEE = localStorage.getItem(LS_ESTIMABLES);
+    const rawEE = localStorage.getItem(`miadmi:${userId}:egresos_estimables`);
     if (rawEE) {
       const s = JSON.parse(rawEE);
       setEstimables({
@@ -303,9 +331,9 @@ const readAll = useCallback(() => {
     setEstimables({ prestamos: [], tarjetas: [], compras: [] });
   }
 
-  // categorías custom (tu función ya hace setState con shallow compare)
   syncCustomCategoryLabels();
-}, [syncCustomCategoryLabels]);
+}, [syncCustomCategoryLabels, userId]);
+
 
 
 
@@ -384,7 +412,7 @@ const readAll = useCallback(() => {
     window.removeEventListener("miadmi:data-updated", readAll);
     document.removeEventListener("visibilitychange", onVisibility);
   };
-}, [readAll, pathname]);
+}, [readAll, pathname, activeMode]);
 
 
   const ingresosGen = n(general?.sueldos) + n(general?.otrosIngresos);
