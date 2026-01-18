@@ -786,15 +786,16 @@ return (
           }
         }
 
-        const snapshot = {
-          id: remote?.id ?? cached?.id ?? null,
-          ingresos: remote?.ingresos ?? cached?.ingresos ?? {},
-          egresos: remote?.egresos ?? cached?.egresos ?? {},
-          saldoInicial: cached?.saldoInicial ?? "",
-          ahorroMensual: cached?.ahorroMensual ?? cached?.ahorroDeseado ?? "",
-          detalles: cached?.detalles ?? null,
-          projection: cached?.projection ?? null,
-        };
+const snapshot = {
+  id: remote?.id ?? null,
+  ingresos: remote?.ingresos ?? cached?.ingresos ?? {},
+  egresos: remote?.egresos ?? cached?.egresos ?? {},
+  saldoInicial: cached?.saldoInicial ?? "",
+  ahorroMensual: cached?.ahorroMensual ?? cached?.ahorroDeseado ?? "",
+  detalles: cached?.detalles ?? null,
+  projection: cached?.projection ?? null,
+};
+
 
         setCustomIncomeCategories(resolvedCustomCategories.ingresos);
         setCustomExpenseCategories(resolvedCustomCategories.egresos);

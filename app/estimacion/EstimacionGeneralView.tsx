@@ -13,7 +13,7 @@ import {
 import { useSessionInfo } from "../../components/SessionProvider";
 import { triggerPremiumBlock } from "../../lib/premiumBlocker";
 
-const LS_KEY = "miadmi:estimacion_general";
+const LS_KEY = (userId) => `miadmi:${userId}:estimacion_general`;
 const MODE_KEY = "miadmi:estimacion_mode";
 
 const n = (v) => {
@@ -203,11 +203,14 @@ useEffect(() => {
 
       if (!snapshot) {
         try {
-          const raw = localStorage.getItem(LS_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed) snapshot = buildSnapshot(parsed);
-          }
+if (ctx.userId) {
+  const raw = localStorage.getItem(LS_KEY(ctx.userId));
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (parsed) snapshot = buildSnapshot(parsed);
+  }
+}
+
         } catch {
           // ignore storage errors
         }
@@ -235,7 +238,11 @@ useEffect(() => {
       setEgresos(snapshot.egresos);
       setAhorroDeseado(snapshot.ahorroDeseado);
       setSaldoInicial(snapshot.saldoInicial);
-      setRecordId(snapshot.id ?? null);
+setRecordId(
+  ctx.supabase && ctx.userId
+    ? snapshot.id ?? null
+    : null
+);
       setActiveMode(modeValue);
       setModeError("");
       setDirty(false);
@@ -256,14 +263,15 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-  if (!loaded || hydratingRef.current) return;
+  if (!loaded || hydratingRef.current || !session.userId) return;
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(buildSnapshot()));
+    localStorage.setItem(
+      LS_KEY(session.userId),
+      JSON.stringify(buildSnapshot())
+    );
     emitDataUpdated();
-  } catch {
-    // ignore storage errors
-  }
-}, [loaded, sueldos, otrosIngresos, egresos, ahorroDeseado, saldoInicial, recordId]);
+  } catch {}
+}, [loaded, sueldos, otrosIngresos, egresos, ahorroDeseado, saldoInicial, recordId, session.userId]);
 
 useEffect(() => {
   try {
@@ -515,8 +523,10 @@ const handleSave = async () => {
     setRecordId(finalId);
 
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(storedSnapshot));
-      emitDataUpdated(); // ✅ evento (throttle) una sola vez
+   if (session.userId) {
+  localStorage.setItem(LS_KEY(session.userId), JSON.stringify(storedSnapshot));
+  emitDataUpdated();
+}  // ✅ evento (throttle) una sola vez
     } catch {
       // ignore storage errors
     }

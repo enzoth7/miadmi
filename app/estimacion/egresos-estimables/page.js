@@ -15,7 +15,7 @@ import {
 } from "../../../lib/installments";
 import { EgresosEstimablesOnboardingTour } from "../../../components/onboarding/EgresosEstimablesOnboardingTour";
 
-const LS_KEY = "miadmi:egresos_estimables";
+const LS_KEY = (userId) => `miadmi:${userId}:egresos_estimables`;
 
 const n = (value) => {
   const normalized = String(value ?? "").replace(",", ".").trim();
@@ -216,7 +216,7 @@ const autoGrow = (e) => {
               setTarjetas(snapshot.tarjetas);
               setCompras(snapshot.compras);
               try {
-                localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
+localStorage.setItem(LS_KEY(ctx.userId), JSON.stringify(snapshot));
               } catch {
                 // ignore storage errors
               }
@@ -229,7 +229,9 @@ const autoGrow = (e) => {
 
         if (!synced) {
           try {
-            const raw = localStorage.getItem(LS_KEY);
+if (!ctx.userId) return;
+
+const raw = localStorage.getItem(LS_KEY(ctx.userId));
             if (raw) {
               const cached = JSON.parse(raw);
               if (cached && active) {
@@ -271,15 +273,16 @@ const autoGrow = (e) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!loaded) return;
-    const snapshot = buildPersistableSnapshot();
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
-    } catch {
-      // ignore storage errors
-    }
-  }, [loaded, prestamos, tarjetas, compras]);
+useEffect(() => {
+  if (!loaded || !session.userId) return;
+
+  const snapshot = buildPersistableSnapshot();
+  try {
+    localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
+  } catch {
+    // ignore storage errors
+  }
+}, [loaded, prestamos, tarjetas, compras, session.userId]);
 
   const markDirty = () => {
     if (!hydratingRef.current) {
@@ -330,7 +333,7 @@ useEffect(() => {
     try {
       await replaceEstimables(session.supabase, session.userId, snapshot);
       try {
-        localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
+localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
       } catch {
         // ignore storage errors
       }
