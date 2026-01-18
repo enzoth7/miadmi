@@ -15,6 +15,7 @@ export type EstimacionEspecifica = {
   id: string | null;
   ingresos: any;
   egresos: any;
+  saldo_inicial?: number | null;
   projection?: any | null;
   projection_anchor?: string | null;
   ahorro_mensual?: number | null;
@@ -429,6 +430,7 @@ export async function fetchEstimacionEspecifica(
     id: data.id ?? null,
     ingresos: data.ingresos ?? {},
     egresos: data.egresos ?? {},
+    saldo_inicial: data.saldo_inicial ?? null,
     projection: data.projection ?? null,
     projection_anchor: data.projection_anchor ?? null,
     ahorro_mensual: data.ahorro_mensual ?? null,
