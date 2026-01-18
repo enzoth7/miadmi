@@ -790,7 +790,7 @@ const snapshot = {
   id: remote?.id ?? null,
   ingresos: remote?.ingresos ?? cached?.ingresos ?? {},
   egresos: remote?.egresos ?? cached?.egresos ?? {},
-  saldoInicial: cached?.saldoInicial ?? "",
+saldoInicial: remote?.saldo_inicial ?? cached?.saldoInicial ?? "",
   ahorroMensual: cached?.ahorroMensual ?? cached?.ahorroDeseado ?? "",
   detalles: cached?.detalles ?? null,
   projection: cached?.projection ?? null,

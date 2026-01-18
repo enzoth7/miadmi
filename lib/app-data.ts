@@ -419,7 +419,7 @@ export async function fetchEstimacionEspecifica(
 ): Promise<EstimacionEspecifica | null> {
   const { data } = await supabase
     .from("estimacion_especifica")
-    .select("id, ingresos, egresos, projection, projection_anchor, ahorro_mensual")
+    .select("id, ingresos, egresos, saldo_inicial, projection, projection_anchor, ahorro_mensual")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -457,10 +457,10 @@ console.log("🧪 payload recibido:", payload);
 const row = {
   ingresos: payload.ingresos ?? {},
   egresos: payload.egresos ?? {},
-  saldo_inicial:
-    payload.saldo_inicial === null || payload.saldo_inicial === undefined
-      ? null
-      : payload.saldo_inicial,
+saldo_inicial:
+  payload.saldo_inicial === null || payload.saldo_inicial === undefined
+    ? null
+    : payload.saldo_inicial,
   projection: payload.projection ?? null,
   projection_anchor: payload.projection_anchor ?? null,
   ahorro_mensual:
