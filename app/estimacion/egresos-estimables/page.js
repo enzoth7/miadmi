@@ -65,10 +65,11 @@ const asCompra = (item) => ({
 const MAX_FREE_ESTIMABLES = 5;
 
 const inputBaseClasses =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0";
-const inputRightClasses = `${inputBaseClasses} text-right font-semibold`;
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0 md:px-3 md:py-2 md:text-sm";
+const inputRightClasses = `${inputBaseClasses} text-right font-semibold [font-variant-numeric:tabular-nums]`;
 const disabledInputClasses =
-  "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-right text-sm font-semibold text-slate-600 cursor-not-allowed";
+  "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-right text-base font-semibold text-slate-600 cursor-not-allowed md:px-3 md:py-2 md:text-sm";
+
 
 const SUSCRIPTION_VIRTUAL_INSTALLMENTS = 120;
 
@@ -174,6 +175,13 @@ export default function EgresosEstimablesPage() {
     tarjetas: tarjetas.map((item) => ({ ...item })),
     compras: compras.map((item) => ({ ...item })),
   });
+
+const autoGrow = (e) => {
+  const el = e.currentTarget;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+};
+
 
   useEffect(() => {
     let active = true;
@@ -697,20 +705,20 @@ const addCompra = () => {
 
   <div className="w-full overflow-x-auto md:overflow-x-hidden rounded-xl border border-slate-100">
     <table className="w-full table-auto text-sm">
-  <colgroup>
-    <col className="w-[28%]" />  {/* Nombre */}
-    <col className="w-[14%]" />  {/* Inicio */}
-    <col className="w-[14%]" />  {/* Fin */}
-    <col className="w-[8%]" />   {/* Cuotas (angosta) */}
-    <col className="w-[10%]" />  {/* Total */}
-    <col className="w-[10%]" />  {/* Cuota */}
-    <col className="w-[14%]" />  {/* Tipo */}
-    <col className="w-[2%]" />   {/* Eliminar */}
-  </colgroup>
+<colgroup>
+  <col className="w-[30%] md:w-[28%]" /> {/* Nombre */}
+  <col className="w-[12%] md:w-[14%]" /> {/* Inicio */}
+  <col className="w-[12%] md:w-[14%]" /> {/* Fin */}
+  <col className="w-[6%] md:w-[8%]" />   {/* Cuotas */}
+  <col className="w-[14%] md:w-[10%]" /> {/* Total */}
+  <col className="w-[10%] md:w-[10%]" /> {/* Cuota */}
+  <col className="w-[14%] md:w-[14%]" /> {/* Tipo */}
+  <col className="w-[2%] md:w-[2%]" />   {/* Eliminar */}
+</colgroup>
 </table>
 
 
-      <thead className="bg-slate-50 text-slate-600 whitespace-nowrap">
+<thead className="bg-slate-50 text-slate-600">
         <tr>
          <th className="px-1 md:px-2 py-2 text-left">Nombre</th>
 <th className="px-1 md:px-2 py-2 text-left">Inicio</th>
@@ -727,16 +735,19 @@ const addCompra = () => {
       <tbody className="divide-y">
         {tarjetas.map((item) => (
           <tr key={item.id} className="hover:bg-slate-50/80">
-            <td className="px-1 md:px-2 py-2">
-              <input
-                className={`${inputBaseClasses} w-full min-w-0 py-1`}
-                value={item.nombre}
-                onChange={(e) => updTarjeta(item.id, { nombre: e.target.value })}
-                placeholder="Ej: Celular"
-              />
+<td className="px-1 md:px-2 py-2 align-top">
+<textarea
+  className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1 leading-snug resize-none`}
+  rows={1}
+  value={item.nombre}
+  onChange={(e) => updTarjeta(item.id, { nombre: e.target.value })}
+  onInput={autoGrow}
+  placeholder="Ej: Celular"
+/>
+
             </td>
 
-            <td className="px-1 md:px-2 py-2">
+<td className="px-1 md:px-2 py-2 align-top">
               <div className="w-[120px]">
                 <MonthField
                   value={item.mesInicio}
@@ -745,7 +756,7 @@ const addCompra = () => {
               </div>
             </td>
 
-            <td className="px-1 md:px-2 py-2">
+<td className="px-1 md:px-2 py-2 align-top">
               <div className="w-[120px]">
                 <MonthField
                   value={item.mesFin}
@@ -764,7 +775,7 @@ const addCompra = () => {
 
             <td className="px-1 md:px-2 py-2 text-right">
               <input
-                className={`${inputRightClasses} w-full min-w-0 py-1`}
+className={`${inputRightClasses} w-full min-w-[110px] md:min-w-0 py-3 md:py-1`}
                 value={item.valorTotal}
                 onChange={(e) => updTarjeta(item.id, { valorTotal: e.target.value })}
                 inputMode="decimal"
@@ -778,9 +789,9 @@ const addCompra = () => {
               </div>
             </td>
 
-            <td className="px-1 md:px-2 py-2">
+<td className="px-1 md:px-2 py-2 align-top">
               <select
-                className={`${inputBaseClasses} w-full min-w-0 py-1`}
+className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
                 value={item.suscripcion ? "suscripcion" : "compra"}
                 onChange={(e) =>
                   updTarjeta(item.id, { suscripcion: e.target.value === "suscripcion" })
@@ -804,7 +815,7 @@ const addCompra = () => {
         ))}
 
         <tr className="bg-slate-50/80">
-          <td className="px-1 md:px-2 py-2">
+<td className="px-1 md:px-2 py-2 align-top">
 <button
   type="button"
   onClick={() => {
