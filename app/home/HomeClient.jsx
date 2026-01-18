@@ -10,9 +10,10 @@ import {
   CheckCircle2,
   Lightbulb,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 import { LS_CUSTOM_CATEGORIES } from "../estimacion/especifica/constants";
+
 
 
 const LS_GEN = "miadmi:estimacion_general";
@@ -225,6 +226,7 @@ const areCustomDictionariesEqual = (a, b) =>
 
 export default function HomeClient() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = supabaseBrowser();
   const verifyRef = useRef(false);
 
@@ -382,7 +384,7 @@ const readAll = useCallback(() => {
     window.removeEventListener("miadmi:data-updated", readAll);
     document.removeEventListener("visibilitychange", onVisibility);
   };
-}, [readAll]);
+}, [readAll, pathname]);
 
 
   const ingresosGen = n(general?.sueldos) + n(general?.otrosIngresos);
