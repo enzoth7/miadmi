@@ -308,12 +308,17 @@ const readAll = useCallback(() => {
     setEspecifica(null);
   }
 
-  try {
-    const storedMode = localStorage.getItem(MODE_KEY);
-    if (storedMode === "especifica" || storedMode === "general") {
-      setActiveMode(storedMode);
-    }
-  } catch {}
+try {
+  const storedMode = localStorage.getItem(MODE_KEY);
+  if (storedMode === "especifica" || storedMode === "general") {
+    setActiveMode(storedMode);
+  } else if (especifica) {
+    setActiveMode("especifica");
+  } else {
+    setActiveMode("general");
+  }
+} catch {}
+
 
   try {
     const rawEE = localStorage.getItem(`miadmi:${userId}:egresos_estimables`);
@@ -442,7 +447,9 @@ const readAll = useCallback(() => {
 
 const includeGeneral = activeMode === "general";
 const activeModeLabel = includeGeneral ? "Simple" : "Avanzado";
-const ingresosTotales = includeGeneral ? ingresosGen : ingresosEsp;
+const ingresosTotales = includeGeneral
+  ? ingresosGen + saldoInicial
+  : ingresosEsp + saldoInicial;
 const egresosTotales = includeGeneral ? egresosGen : egresosEsp;
 const ahorroDeseado = includeGeneral
   ? n(general?.ahorroDeseado)
