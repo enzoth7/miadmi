@@ -449,6 +449,11 @@ export async function upsertEstimacionEspecifica(
     ahorro_mensual?: number | null;
   }
 ) {
+
+  console.log("🧪 upsertEstimacionEspecifica EJECUTADA");
+console.log("🧪 userId:", userId);
+console.log("🧪 payload recibido:", payload);
+
 const row = {
   ingresos: payload.ingresos ?? {},
   egresos: payload.egresos ?? {},
@@ -463,6 +468,8 @@ const row = {
       ? null
       : payload.ahorro_mensual,
 };
+
+console.log("🧪 row que se manda a Supabase:", row);
 
 
   if (payload.id) {
