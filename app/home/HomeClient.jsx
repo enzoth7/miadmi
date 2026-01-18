@@ -312,11 +312,9 @@ try {
   const storedMode = localStorage.getItem(MODE_KEY);
   if (storedMode === "especifica" || storedMode === "general") {
     setActiveMode(storedMode);
-  } else if (especifica) {
-    setActiveMode("especifica");
-  } else {
-    setActiveMode("general");
-  }
+ } else {
+  setActiveMode("general");
+}
 } catch {}
 
 
