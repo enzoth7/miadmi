@@ -13,15 +13,19 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 import { LS_CUSTOM_CATEGORIES } from "../estimacion/especifica/constants";
-import { getSupabaseSession } from "../../lib/app-data";
+import {
+  getSupabaseSession,
+  fetchEstimacionGeneral,
+  fetchEstimacionEspecifica,
+  fetchEgresosEstimables,
+  fetchEstimationMode,
+  DEFAULT_ESTIMATION_MODE,
+} from "../../lib/app-data";
 
 
 
 
-const LS_GEN = "miadmi:estimacion_general";
-const LS_ESP = "miadmi:estimacion_especifica";
-const LS_ESTIMABLES = "miadmi:egresos_estimables";
-const MODE_KEY = "miadmi:estimacion_mode";
+
 const TOUR_STEPS = [
   {
     id: 1,
@@ -75,9 +79,31 @@ const SPECIFIC_EXPENSE_LABELS = {
 };
 
 const n = (v) => {
-  const x = Number(String(v ?? "").replace(",", "."));
+  if (v == null) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+
+  let s = String(v).trim();
+  if (!s) return 0;
+
+  s = s.replace(/\s+/g, "");
+  s = s.replace(/[^\d,.-]/g, "");
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    // assume "." thousands and "," decimals
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma && !hasDot) {
+    s = s.replace(",", ".");
+  } else {
+    // only dots or plain number -> keep
+  }
+
+  const x = Number(s);
   return Number.isFinite(x) ? x : 0;
 };
+
 
 const fmtUYU = (v, maxFrac = 0) =>
   new Intl.NumberFormat("es-UY", {
@@ -229,12 +255,35 @@ const areCustomDictionariesEqual = (a, b) =>
 export default function HomeClient() {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = supabaseBrowser();
+  const supabase = useMemo(() => supabaseBrowser(), []);
   const verifyRef = useRef(false);
 
   const [general, setGeneral] = useState(null);
   const [especifica, setEspecifica] = useState(null);
   const [activeMode, setActiveMode] = useState("general");
+const especificaActiva = useMemo(() => {
+  if (!especifica) return false;
+
+  // ingresos: array o objeto
+  if (Array.isArray(especifica.ingresos) && especifica.ingresos.length > 0) return true;
+  if (especifica.ingresos && typeof especifica.ingresos === "object") {
+    if (flattenNumericObject(especifica.ingresos).some((it) => it.value > 0)) return true;
+  }
+
+  // egresos: array o objeto
+  if (Array.isArray(especifica.egresos) && especifica.egresos.length > 0) return true;
+  if (especifica.egresos && typeof especifica.egresos === "object") {
+    if (flattenNumericObject(especifica.egresos).some((it) => it.value > 0)) return true;
+  }
+
+  // fallback: saldoInicial / ahorroMensual también cuentan como "hay específica"
+  if (n(especifica.saldoInicial ?? especifica.saldo_inicial) !== 0) return true;
+  if (n(especifica.ahorroMensual ?? especifica.ahorro_mensual ?? especifica.ahorroDeseado) !== 0) return true;
+
+  return false;
+}, [especifica]);
+
+
   const [estimables, setEstimables] = useState({ prestamos: [], tarjetas: [], compras: [] });
   const [customCategoryLabels, setCustomCategoryLabels] = useState(() => createEmptyCategoryDictionary());
   const [showTour, setShowTour] = useState(false);
@@ -266,76 +315,54 @@ export default function HomeClient() {
     [customCategoryLabels.egresos]
   );
 
-const [userId, setUserId] = useState(null);
-
-useEffect(() => {
-  let active = true;
-  (async () => {
-    try {
-      const ctx = await getSupabaseSession();
-      if (!active) return;
-      setUserId(ctx?.userId ?? null);
-    } catch {
-      setUserId(null);
-    }
-  })();
-  return () => {
-    active = false;
-  };
-}, []);
-
-
-
-const readAll = useCallback(() => {
-  if (!userId) {
-    setGeneral(null);
-    setEspecifica(null);
-    setEstimables({ prestamos: [], tarjetas: [], compras: [] });
-    return;
-  }
-
-  try {
-    const rawG = localStorage.getItem(`miadmi:${userId}:estimacion_general`);
-    setGeneral(rawG ? JSON.parse(rawG) : null);
-  } catch {
-    setGeneral(null);
-  }
-
-  try {
-    const rawE = localStorage.getItem(`miadmi:${userId}:estimacion_especifica`);
-    setEspecifica(rawE ? JSON.parse(rawE) : null);
-  } catch {
-    setEspecifica(null);
-  }
-
-try {
-  const storedMode = localStorage.getItem(MODE_KEY);
-  if (storedMode === "especifica" || storedMode === "general") {
-    setActiveMode(storedMode);
- } else {
-  setActiveMode("general");
-}
-} catch {}
-
-
-  try {
-    const rawEE = localStorage.getItem(`miadmi:${userId}:egresos_estimables`);
-    if (rawEE) {
-      const s = JSON.parse(rawEE);
-      setEstimables({
-        prestamos: Array.isArray(s?.prestamos) ? s.prestamos : [],
-        tarjetas: Array.isArray(s?.tarjetas) ? s.tarjetas : [],
-        compras: Array.isArray(s?.compras) ? s.compras : [],
-      });
-    } else {
-      setEstimables({ prestamos: [], tarjetas: [], compras: [] });
-    }
-  } catch {
-    setEstimables({ prestamos: [], tarjetas: [], compras: [] });
-  }
-
+const readAll = useCallback(async () => {
   syncCustomCategoryLabels();
-}, [syncCustomCategoryLabels, userId]);
+
+  try {
+    const { userId } = await getSupabaseSession();
+
+    if (!userId) {
+      setGeneral(null);
+      setEspecifica(null);
+      setEstimables({ prestamos: [], tarjetas: [], compras: [] });
+      setActiveMode(DEFAULT_ESTIMATION_MODE);
+      return;
+    }
+
+    const [g, e, est, mode] = await Promise.all([
+      fetchEstimacionGeneral(supabase, userId),
+      fetchEstimacionEspecifica(supabase, userId),
+      fetchEgresosEstimables(supabase, userId),
+      fetchEstimationMode(supabase, userId),
+    ]);
+
+    const resolvedMode =
+      mode === "especifica" || mode === "general" ? mode : DEFAULT_ESTIMATION_MODE;
+
+    setGeneral(g ?? null);
+    setEspecifica(e ?? null);
+    setEstimables(est ?? { prestamos: [], tarjetas: [], compras: [] });
+    setActiveMode(resolvedMode);
+  } catch (error) {
+    console.error("[HOME] fetch failed", error);
+    setGeneral(null);
+    setEspecifica(null);
+    setEstimables({ prestamos: [], tarjetas: [], compras: [] });
+    setActiveMode(DEFAULT_ESTIMATION_MODE);
+  }
+}, [supabase, syncCustomCategoryLabels]);
+
+
+const handleRefresh = useCallback(() => {
+  void readAll();
+}, [readAll]);
+
+const handleVisibility = useCallback(() => {
+  if (document.visibilityState === "visible") {
+    handleRefresh();
+  }
+}, [handleRefresh]);
+
 
 
 
@@ -395,35 +422,63 @@ try {
     })();
   }, [router, supabase]);
 
-
   useEffect(() => {
   if (typeof window === "undefined") return;
 
-  // ✅ primera carga al entrar a Home
-  readAll();
+  // primera carga al entrar a Home
+  handleRefresh();
 
-  const onVisibility = () => {
-    if (document.visibilityState === "visible") readAll();
-  };
-
-  window.addEventListener("focus", readAll);
-  window.addEventListener("miadmi:data-updated", readAll);
-  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("focus", handleRefresh);
+  window.addEventListener("miadmi:data-updated", handleRefresh);
+  document.addEventListener("visibilitychange", handleVisibility);
 
   return () => {
-    window.removeEventListener("focus", readAll);
-    window.removeEventListener("miadmi:data-updated", readAll);
-    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("focus", handleRefresh);
+    window.removeEventListener("miadmi:data-updated", handleRefresh);
+    document.removeEventListener("visibilitychange", handleVisibility);
   };
-}, [readAll, pathname, activeMode]);
+}, [handleRefresh, handleVisibility, pathname]);
 
 
-  const ingresosGen = n(general?.sueldos) + n(general?.otrosIngresos);
+const sueldosGen = useMemo(
+  () =>
+    n(
+      general?.sueldos ??
+        general?.sueldo ??
+        general?.ingresos ??
+        general?.ingreso
+    ),
+  [general]
+);
 
-  const egresosGen = useMemo(() => {
-    const arr = Array.isArray(general?.egresos) ? general.egresos : [];
-    return arr.reduce((acc, e) => acc + n(e?.monto), 0);
-  }, [general]);
+const otrosIngresosGen = useMemo(
+  () =>
+    n(
+      general?.otrosIngresos ??
+        general?.otros_ingresos ??
+        general?.otros ??
+        general?.extra ??
+        general?.extras
+    ),
+  [general]
+);
+
+const ingresosGen = sueldosGen + otrosIngresosGen;
+
+const egresosGen = useMemo(() => {
+  const eg = general?.egresos;
+
+  if (Array.isArray(eg)) {
+    return eg.reduce((acc, it) => acc + n(it?.monto), 0);
+  }
+
+  if (eg && typeof eg === "object") {
+    return Object.values(eg).reduce((acc, v) => acc + n(v?.monto ?? v), 0);
+  }
+
+  return 0;
+}, [general]);
+
 
   const ingresosEsp = useMemo(() => {
     if (!especifica) return 0;
@@ -445,36 +500,60 @@ try {
 
 const includeGeneral = activeMode === "general";
 const activeModeLabel = includeGeneral ? "Simple" : "Avanzado";
-const ingresosTotales = includeGeneral
-  ? ingresosGen + saldoInicial
-  : ingresosEsp + saldoInicial;
-const egresosTotales = includeGeneral ? egresosGen : egresosEsp;
+
+const saldoInicial = includeGeneral
+  ? n(general?.saldoInicial ?? general?.saldo_inicial)
+  : n(especifica?.saldoInicial ?? especifica?.saldo_inicial);
+
+const ingresosBase = includeGeneral ? ingresosGen : ingresosEsp;
+const egresosBase = includeGeneral ? egresosGen : egresosEsp;
+
+const ingresosTotales = saldoInicial + ingresosBase;
+const egresosTotales = egresosBase;
+
 const ahorroDeseado = includeGeneral
-  ? n(general?.ahorroDeseado)
-  : n(especifica?.ahorroMensual ?? especifica?.ahorroDeseado);
-const saldoInicial = includeGeneral ? n(general?.saldoInicial) : n(especifica?.saldoInicial);
-const resultado = ingresosTotales - egresosTotales;
+  ? n(general?.ahorroDeseado ?? general?.ahorro_deseado)
+  : n(especifica?.ahorroMensual ?? especifica?.ahorro_mensual ?? especifica?.ahorroDeseado);
+
+const resultado = saldoInicial + ingresosBase - egresosBase;
 const capacidadMensual = resultado - ahorroDeseado;
-const saldoProyectado = saldoInicial + resultado;
+const saldoProyectado = resultado;
+
+
 const gastoSobreIngreso = ingresosTotales > 0 ? Math.round((egresosTotales / ingresosTotales) * 100) : null;
-const totalPrestamos = estimables.prestamos.reduce((acc, it) => acc + n(it?.montoCuota), 0);
-const totalTarjetas = estimables.tarjetas.reduce((acc, it) => acc + n(it?.montoCuota), 0);
-const totalCompras = estimables.compras.reduce((acc, it) => acc + n(it?.valor), 0);
+const totalPrestamos = Array.isArray(estimables?.prestamos)
+  ? estimables.prestamos.reduce((acc, it) => acc + n(it?.montoCuota), 0)
+  : 0;
+
+const totalTarjetas = Array.isArray(estimables?.tarjetas)
+  ? estimables.tarjetas.reduce((acc, it) => acc + n(it?.montoCuota), 0)
+  : 0;
+
+const totalCompras = Array.isArray(estimables?.compras)
+  ? estimables.compras.reduce((acc, it) => acc + n(it?.valor), 0)
+  : 0;
+
 const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
 
   const graficoEgresos = useMemo(() => {
     if (includeGeneral) {
-      const base = Array.isArray(general?.egresos) ? general.egresos : [];
-      return base
-        .filter((it) => n(it?.monto) > 0)
-        .map((it) => ({
-          name:
-            resolveFromDictionary(it?.nombre, expenseLabelDictionary) ||
-            resolveFromDictionary(it?.categoria, expenseLabelDictionary) ||
-            resolveFromDictionary(it?.id, expenseLabelDictionary) ||
-            String(it?.nombre || it?.categoria || "Sin nombre"),
-          value: n(it?.monto),
-        }));
+      const eg = general?.egresos;
+      if (Array.isArray(eg)) {
+        return eg
+          .filter((it) => n(it?.monto) > 0)
+          .map((it) => ({
+            name:
+              resolveFromDictionary(it?.nombre, expenseLabelDictionary) ||
+              resolveFromDictionary(it?.categoria, expenseLabelDictionary) ||
+              resolveFromDictionary(it?.id, expenseLabelDictionary) ||
+              String(it?.nombre || it?.categoria || "Sin nombre"),
+            value: n(it?.monto),
+          }));
+      }
+      if (eg && typeof eg === "object") {
+        return flattenNumericObject(eg, expenseLabelDictionary, "general");
+      }
+      return [];
     }
     if (!especifica) return [];
     if (Array.isArray(especifica.egresos)) {
@@ -498,10 +577,10 @@ const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
   const graficoIngresos = useMemo(() => {
     if (includeGeneral) {
       const base = [];
-      if (n(general?.sueldos) > 0)
-        base.push({ name: "Sueldos / Honorarios", value: n(general?.sueldos) });
-      if (n(general?.otrosIngresos) > 0)
-        base.push({ name: "Otros ingresos", value: n(general?.otrosIngresos) });
+      if (sueldosGen > 0)
+        base.push({ name: "Sueldos / Honorarios", value: sueldosGen });
+      if (otrosIngresosGen > 0)
+        base.push({ name: "Otros ingresos", value: otrosIngresosGen });
       return base;
     }
     if (!especifica) return [];
@@ -521,7 +600,7 @@ const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
       return flattenNumericObject(especifica.ingresos, incomeLabelDictionary, "especifica");
     }
     return [];
-  }, [general, especifica, includeGeneral, incomeLabelDictionary]);
+  }, [general, especifica, includeGeneral, incomeLabelDictionary, sueldosGen, otrosIngresosGen]);
 
   const consejos = useMemo(() => {
     const ctx = {
@@ -533,6 +612,7 @@ const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
       saldoInicial,
       saldoProyectado,
       includeGeneral,
+      especificaActiva,
       tieneGeneral: Boolean(general),
       tieneEspecifica: Boolean(especifica),
       graficoIngresos,
