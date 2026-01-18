@@ -449,16 +449,21 @@ export async function upsertEstimacionEspecifica(
     ahorro_mensual?: number | null;
   }
 ) {
-  const row = {
-    ingresos: payload.ingresos ?? {},
-    egresos: payload.egresos ?? {},
-    projection: payload.projection ?? null,
-    projection_anchor: payload.projection_anchor ?? null,
-    ahorro_mensual:
-      payload.ahorro_mensual === null || payload.ahorro_mensual === undefined
-        ? null
-        : payload.ahorro_mensual,
-  };
+const row = {
+  ingresos: payload.ingresos ?? {},
+  egresos: payload.egresos ?? {},
+  saldo_inicial:
+    payload.saldo_inicial === null || payload.saldo_inicial === undefined
+      ? null
+      : payload.saldo_inicial,
+  projection: payload.projection ?? null,
+  projection_anchor: payload.projection_anchor ?? null,
+  ahorro_mensual:
+    payload.ahorro_mensual === null || payload.ahorro_mensual === undefined
+      ? null
+      : payload.ahorro_mensual,
+};
+
 
   if (payload.id) {
     const { data, error } = await supabase
