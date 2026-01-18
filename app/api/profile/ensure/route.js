@@ -5,11 +5,15 @@ export async function POST() {
   const supabase = supabaseServer();
 
   // 1) Obtener sesión/usuario actual
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "no-auth" }, { status: 401 });
-  }
+const {
+  data: { user },
+  error: userError,
+} = await supabase.auth.getUser();
+
+if (userError || !user) {
+  return NextResponse.json({ ok: false, error: "no-auth" }, { status: 401 });
+}
+
 
   // 2) Upsert de la fila en profiles (gracias a las políticas RLS que agregamos)
   const payload = {
