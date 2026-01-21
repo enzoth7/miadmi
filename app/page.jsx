@@ -118,7 +118,7 @@ export default function LandingPage() {
   <section className="mx-auto mb-10 max-w-3xl space-y-6 text-center">
   <div className="flex flex-col items-center space-y-2">
     <h2 className="text-3xl font-semibold sm:text-4xl">
-      App de finanzas personales 
+      Asistente de finanzas personales 
     </h2>
 
     <p className="text-base text-white/80 sm:text-lg">
