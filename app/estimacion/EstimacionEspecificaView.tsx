@@ -28,6 +28,7 @@ import {
 } from "../../lib/app-data";
 import { buildInstallmentSeries, buildPlannedPurchaseSeries, monthDiff } from "../../lib/installments";
 import { triggerPremiumBlock } from "../../lib/premiumBlocker";
+import ProjectionTableExpanded from "../../app/components/ProjectionTableExpanded";
 
 const INCOME_ORDER = [
   "sueldos",
@@ -98,6 +99,7 @@ export default function EstimacionEspecificaView({
   }, [session]);
   const [recordId, setRecordId] = useState(null);
   const [projection, setProjection] = useState(null);
+  const [showProjectionExpanded, setShowProjectionExpanded] = useState(false);
   const [legacyDetalles, setLegacyDetalles] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -1449,6 +1451,17 @@ const totalIngresos = useMemo(
 >
   Hacer ajustes
 </button>
+<button
+  type="button"
+  onClick={() => setShowProjectionExpanded(true)}
+  className={[
+    "inline-flex items-center rounded-lg border px-4 py-2 text-sm font-semibold transition md:hidden",
+    "border-sky-200 bg-white text-sky-800 hover:bg-sky-100",
+  ].join(" ")}
+>
+  Abrir vista
+</button>
+
 
         </div>
         </div>
@@ -1600,6 +1613,21 @@ const totalIngresos = useMemo(
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
+      {showProjectionExpanded && (
+  <ProjectionTableExpanded
+    onClose={() => setShowProjectionExpanded(false)}
+    monthLabels={monthLabels}
+    projectionData={projectionData}
+    incomeCategories={incomeCategories}
+    expenseCategories={expenseCategories}
+    incomeSeriesMap={incomeSeriesMap}
+    expenseSeriesMap={expenseSeriesMap}
+    saldoInicialRow={saldoInicialRow}
+    comprasPlanValues={comprasPlanValues}
+  />
+)}
+
+
     </div>
   );
 }
