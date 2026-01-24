@@ -12,6 +12,8 @@ import {
 } from "../../lib/app-data";
 import { useSessionInfo } from "../../components/SessionProvider";
 import { triggerPremiumBlock } from "../../lib/premiumBlocker";
+import ProjectionTableGeneralExpanded from "../../app/components/ProjectionTableGeneralExpanded";
+
 
 const LS_KEY = (userId) => `miadmi:${userId}:estimacion_general`;
 const MODE_KEY = "miadmi:estimacion_mode";
@@ -91,6 +93,7 @@ export default function EstimacionGeneralView({
 } = {}) {
   // --- Estado (sin formateo en vivo; convertimos al calcular) ---
   const [sueldos, setSueldos] = useState("");
+  const [showGeneralExpanded, setShowGeneralExpanded] = useState(false);
   const [otrosIngresos, setOtrosIngresos] = useState("");
   const [egresos, setEgresos] = useState(() => buildFixedEgresos());
   const [ahorroDeseado, setAhorroDeseado] = useState("");
@@ -697,31 +700,38 @@ const handleSave = async () => {
           <h2 className="text-lg font-semibold md:text-xl">
             Proyeccion ({monthCount} meses)
           </h2>
-          <div className="flex flex-col items-start gap-1 text-xs text-slate-500 md:flex-row md:items-center md:gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (!isPremium) {
-                  triggerPremiumBlock("export");
-                  return;
-                }
-                handleExportCsv();
-              }}
-              className={[
-                "inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-semibold transition",
-                isPremium
-                  ? "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
-                  : "cursor-not-allowed border-white/20 bg-white/10 text-white/60 backdrop-blur",
-              ].join(" ")}
-              aria-disabled={!isPremium}
-            >
-              Exportar CSV
-            </button>
-            {!isPremium ? (
-              <span>Disponible con acceso premium.</span>
-            ) : null}
-          </div>
+        <div className="flex items-center gap-2">
+  <button
+    type="button"
+    onClick={() => {
+      if (!isPremium) {
+        triggerPremiumBlock("export");
+        return;
+      }
+      handleExportCsv();
+    }}
+    className={[
+      "inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-semibold transition",
+      isPremium
+        ? "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+        : "cursor-not-allowed border-white/20 bg-white/10 text-white/60 backdrop-blur",
+    ].join(" ")}
+    aria-disabled={!isPremium}
+  >
+    Exportar CSV
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setShowGeneralExpanded(true)}
+    className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-sm font-semibold text-sky-800 hover:bg-sky-100 transition md:hidden"
+  >
+    Abrir vista
+  </button>
+</div>
+
         </div>
+
 
 
 
@@ -855,9 +865,15 @@ const handleSave = async () => {
         </div>
 
 
-
-
-
+ {showGeneralExpanded && (
+      <ProjectionTableGeneralExpanded
+        onClose={() => setShowGeneralExpanded(false)}
+        monthLabels={monthLabels}
+        filas={filas}
+        ingresosDetalleRows={ingresosDetalleRows}
+        egresosDetalleRows={egresosDetalleRows}
+      />
+    )}
 
 
 
