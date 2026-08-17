@@ -60,114 +60,92 @@ export default async function InversionesPage() {
   const cotizaciones = await getCotizaciones();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-4 py-10 text-white">
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <h1 className="text-3xl font-semibold text-white md:text-4xl">Inversiones</h1>
-          </div>
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/70">
-            Proximamente
+    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">Inversiones</h1>
+          <span className="inline-flex items-center rounded-full bg-yellow-100 border border-yellow-300 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-yellow-900">
+            En Desarrollo
           </span>
         </div>
-        <p className="text-sm text-white/80">
-          Estamos construyendo un espacio para ayudarte a invertir mejor en el mercado uruguayo: desde
-          fondos de inversion actualizados hasta herramientas para simular y seguir tus inversiones.
-        </p>
-        <p className="text-sm text-white/60">
-          Todavia no esta listo, pero ya podes ver las cotizaciones clave del dia directamente desde Mi
-          Admi.
+        <p className="text-sm text-gray-600">
+          Estamos construyendo herramientas para simular y seguir tus inversiones en el mercado uruguayo (Letras, UI, Plazo Fijo y Fondos).
         </p>
       </header>
 
-      <section className="grid items-start gap-6 md:grid-cols-2">
-        <div>
-          <p className="text-sm font-semibold text-white">Lo que se viene en Inversiones</p>
-          <ul className="mt-3 space-y-2 text-sm text-white/70">
-            {[
-              "Ver y comparar los fondos de inversion mas nuevos del mercado uruguayo.",
-              "Simular escenarios de inversion segun plazo y riesgo.",
-              "Llevar un registro simple de tus inversiones y sus rendimientos.",
-              "Ver como tus inversiones se integran con tu estimacion general y tus objetivos.",
-            ].map((text) => (
-              <li key={text} className="flex gap-2">
-                <span className="text-white/40"></span>
-                <span>{text}</span>
-              </li>
-            ))}
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-6">
+          <h3 className="text-base font-bold text-[#0b1e3a] mb-3">Lo que se viene en Inversiones</h3>
+          <ul className="space-y-2 text-xs text-gray-700 font-medium">
+            <li className="flex items-center gap-2">✓ Comparador de fondos de inversión del mercado uruguayo.</li>
+            <li className="flex items-center gap-2">✓ Simulador de escenarios según plazo y tasa en UI/Pesos.</li>
+            <li className="flex items-center gap-2">✓ Registro simple de rendimientos e intereses compuestos.</li>
           </ul>
         </div>
-        <div className="rounded-[10px] border border-white/10 bg-white/5 p-4">
-          <p className="text-sm font-semibold text-white">Roadmap de esta seccion</p>
-          <ul className="mt-3 space-y-2 text-sm text-white/70">
-            {[
-              "Fase 1: Cotizaciones clave en tiempo real.",
-              "Fase 2: Simuladores basicos de inversion en pesos y dolares.",
-              "Fase 3: Panel de seguimiento de tus inversiones dentro de Mi Admi.",
-            ].map((text) => (
-              <li key={text}>{text}</li>
-            ))}
+
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+          <h3 className="text-base font-bold text-[#0b1e3a] mb-3">Roadmap de esta sección</h3>
+          <ul className="space-y-2 text-xs text-gray-600">
+            <li><strong>Fase 1:</strong> Cotizaciones clave del día en tiempo real.</li>
+            <li><strong>Fase 2:</strong> Simulador interactivo de interés compuesto.</li>
+            <li><strong>Fase 3:</strong> Panel de seguimiento consolidado dentro de Mi Admi.</li>
           </ul>
         </div>
       </section>
 
-      <section>
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-white">Cotizaciones en Uruguay</h2>
-          <p className="text-xs text-white/60">
-            Datos obtenidos de fuentes oficiales (como BROU y BCU). Esta seccion se actualizara
-            automaticamente cuando terminemos la integracion.
+      <section className="space-y-4 pt-2">
+        <div>
+          <h2 className="text-xl font-bold text-[#0b1e3a]">Cotizaciones del Día en Uruguay</h2>
+          <p className="text-xs text-gray-500">
+            Valores oficiales de referencia para la plaza local.
           </p>
         </div>
-        <div className="mt-4 rounded-[10px] border border-emerald-400/60 bg-gradient-to-br from-emerald-500/25 via-emerald-500/10 to-transparent p-4 shadow-lg shadow-emerald-900/40">
+
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
           {cotizaciones.length === 0 ? (
-            <p className="text-sm text-white/50">
-              No pudimos obtener las cotizaciones en este momento. Proba de nuevo mas tarde.
+            <p className="p-6 text-sm text-gray-500 text-center">
+              No pudimos obtener las cotizaciones en este momento. Probá de nuevo más tarde.
             </p>
           ) : (
-            <table className="w-full text-sm text-white/80">
-              <thead className="border-b border-white/10 text-white/60">
-                <tr>
-                  <th className="py-2 text-left">Activo</th>
-                  <th className="py-2 text-right">Compra</th>
-                  <th className="py-2 text-right">Venta</th>
-                  <th className="py-2 text-right">Ultima actualizacion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cotizaciones.map((c) => (
-                  <tr
-                    key={c.moneda}
-                    className="border-b border-white/5 last:border-0 transition-colors hover:bg-emerald-500/5"
-                  >
-                    <td className="py-2">
-                      <div className="flex items-center gap-2">
-                        <ReactCountryFlag
-                          svg
-                          countryCode={getCountryCode(c.nombre)}
-                          className="rounded-[2px]"
-                          style={{ width: "1.4rem", height: "1.4rem" }}
-                        />
-                        <span>{c.nombre}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 text-right text-base font-semibold text-emerald-300 md:text-lg">
-                      {formatNumber(c.compra)}
-                    </td>
-                    <td className="py-2 text-right text-base font-semibold text-emerald-300 md:text-lg">
-                      {formatNumber(c.venta)}
-                    </td>
-                    <td className="py-2 text-right text-xs text-white/45">
-                      {formatDate(c.fechaActualizacion)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-[#0b1e3a]">
+                <thead className="border-b border-gray-200 bg-gray-50 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Activo</th>
+                    <th className="py-3 px-4 text-right">Compra</th>
+                    <th className="py-3 px-4 text-right">Venta</th>
+                    <th className="py-3 px-4 text-right">Actualización</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {cotizaciones.map((c) => (
+                    <tr key={c.moneda} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold">
+                        <div className="flex items-center gap-2.5">
+                          <ReactCountryFlag
+                            svg
+                            countryCode={getCountryCode(c.nombre)}
+                            className="rounded-sm"
+                            style={{ width: "1.3rem", height: "1.3rem" }}
+                          />
+                          <span>{c.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-[#0b1e3a]">
+                        $ {formatNumber(c.compra)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-blue-900">
+                        $ {formatNumber(c.venta)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-xs text-gray-500 font-mono">
+                        {formatDate(c.fechaActualizacion)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          <p className="mt-3 text-right text-xs text-emerald-300/80">
-            Fuente: uy.dolarapi.com
-          </p>
         </div>
       </section>
     </div>

@@ -162,47 +162,43 @@ export default function CalcularDescuentosPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">
+    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+      <header className="space-y-3">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
           Calculadora de descuentos de salario
         </h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-gray-600">
           Ingresá tu sueldo nominal y algunos datos básicos para estimar cuánto cobrás en mano después de BPS, Fonasa, FRL e IRPF. Los resultados son aproximados y orientativos.
         </p>
 
-        <div className="mt-3 space-y-2 text-sm text-white/70">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <h4 className="text-sm font-semibold text-white/90">Sueldo nominal</h4>
-              <p className="mt-1 text-[13px] leading-snug">
-                Es lo que ganás <span className="font-semibold">antes de descuentos</span>. También se le dice
-                <span className="font-semibold"> sueldo bruto</span>.
-              </p>
-            </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo nominal</h4>
+            <p className="mt-1 text-xs text-gray-600 leading-snug">
+              Es lo que ganás antes de descuentos (sueldo bruto).
+            </p>
+          </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <h4 className="text-sm font-semibold text-white/90">Sueldo líquido</h4>
-              <p className="mt-1 text-[13px] leading-snug">
-                Es lo que efectivamente <span className="font-semibold">cobrás en mano</span>, después de BPS, Fonasa,
-                IRPF y otros descuentos. También se le dice <span className="font-semibold">sueldo neto</span>.
-              </p>
-            </div>
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo líquido</h4>
+            <p className="mt-1 text-xs text-gray-600 leading-snug">
+              Es lo que efectivamente cobrás en mano después de BPS, Fonasa e IRPF (sueldo neto).
+            </p>
           </div>
         </div>
       </header>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Ingresá tus datos</h2>
+      <section className="space-y-4 pt-2">
+        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Tipo de trabajador
               </label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={tipoTrabajador}
                 onChange={(e) => {
                   const nuevo = e.target.value as TipoTrabajador;
@@ -215,203 +211,168 @@ export default function CalcularDescuentosPage() {
                   }
                 }}
               >
-                <option className="text-slate-900" value="industria">
-                  Industria y comercio (empleado mensual)
-                </option>
-                <option className="text-slate-900" value="jornalero">
-                  Jornalero
-                </option>
+                <option value="industria">Industria y comercio (empleado mensual)</option>
+                <option value="jornalero">Jornalero</option>
               </select>
             </div>
 
             <div className="w-full md:w-48">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Tipo de pago
               </label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value as TipoPago)}
               >
-                <option className="text-slate-900" value="mensual">
-                  Mensual
-                </option>
-                <option className="text-slate-900" value="jornal">
-                  Por jornal
-                </option>
+                <option value="mensual">Mensual</option>
+                <option value="jornal">Por jornal</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               {tipoTrabajador === "jornalero" ? "Jornal" : "Sueldo nominal"}
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-white/60">$</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 font-bold text-[#0b1e3a]">
+                $
+              </div>
               <input
                 type="number"
                 inputMode="decimal"
-                className="w-full bg-white/5 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 placeholder={tipoTrabajador === "jornalero" ? "Ej: 1.500" : "Ej: 35.000"}
                 value={sueldoNominal}
                 onChange={(e) => setSueldoNominal(e.target.value)}
               />
             </div>
-            <p className="mt-1 text-xs text-white/50">
+            <p className="mt-1 text-xs text-gray-500">
               {tipoTrabajador === "jornalero"
-                ? "Es el monto que ganás por día trabajado, sin incluir aguinaldo ni primas. Abajo indicás cuántos jornales al mes trabajás."
+                ? "Es el monto que ganás por día trabajado, sin incluir aguinaldo ni primas."
                 : "Es el sueldo nominal que figura en tu recibo, sin incluir aguinaldo ni primas."}
             </p>
           </div>
 
- {tipoPago === "jornal" && (
+          {tipoPago === "jornal" && (
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-white/70 mb-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
                   Jornales al mes
                 </label>
                 <input
                   type="number"
-                  className="w-full bg-white/5 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                   value={jornalesMes}
                   onChange={(e) => setJornalesMes(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-white/50 md:w-64">
+              <p className="text-xs text-gray-500 md:w-64">
                 Si sos jornalero, podés estimar un promedio de 22 jornales al mes.
               </p>
             </div>
           )}
 
           <div>
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-white/70 mb-1">
-                Fondo de Solidaridad
-              </label>
-              <select
-               className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
-                value={fondoSolidaridad}
-                onChange={(e) => setFondoSolidaridad(e.target.value)}
-              >
-                <option className="text-slate-900" value="0">
-                  Sin Fondo de Solidaridad
-                </option>
-                <option className="text-slate-900" value="274">
-                  1/2 BPC anual
-                </option>
-                <option className="text-slate-900" value="548">
-                  1 BPC anual
-                </option>
-                <option className="text-slate-900" value="1096">
-                  2 BPC anual
-                </option>
-              </select>
-            </div>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Fondo de Solidaridad
+                </label>
+                <select
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  value={fondoSolidaridad}
+                  onChange={(e) => setFondoSolidaridad(e.target.value)}
+                >
+                  <option value="0">Sin Fondo de Solidaridad</option>
+                  <option value="274">1/2 BPC anual</option>
+                  <option value="548">1 BPC anual</option>
+                  <option value="1096">2 BPC anual</option>
+                </select>
+              </div>
 
-            <div className="w-full md:w-48">
-              <label className="block text-xs font-medium text-white/70 mb-1">
-                Adicional Fondo
-              </label>
-              <select
-               className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
-                value={adicionalFondo}
-                onChange={(e) => setAdicionalFondo(e.target.value)}
-              >
-                <option className="text-slate-900" value="0">
-                  No
-                </option>
-                <option className="text-slate-900" value="457">
-                  Si
-                </option>
-              </select>
+              <div className="w-full md:w-48">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Adicional Fondo
+                </label>
+                <select
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  value={adicionalFondo}
+                  onChange={(e) => setAdicionalFondo(e.target.value)}
+                >
+                  <option value="0">No</option>
+                  <option value="457">Si</option>
+                </select>
+              </div>
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Tomamos como referencia la BPC vigente: 1 BPC = $ {BPC_2025.toLocaleString("es-UY")}.
+            </p>
           </div>
- {/* 🔁 NUEVO TEXTO: valor de la BPC */}
-  <p className=" mt-1 text-[12px] text-white/50">
-    Para estos cálculos tomamos como referencia el valor vigente de la{" "}
-    <span className="font-semibold text-white/80">
-      BPC: 1 BPC = $ {BPC_2025.toLocaleString("es-UY")}
-    </span>{" "}
-    (Base de Prestaciones y Contribuciones).
-  </p>
-  </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Caja profesional (CJPPU / Notarial)
               </label>
               <select
-           className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={aporteCajaProfesional}
                 onChange={(e) => setAporteCajaProfesional(e.target.value)}
               >
-                <option className="text-slate-900" value="0">
-                  Sin caja profesional
-                </option>
-                <option className="text-slate-900" value="7000">
-                  CJPPU mínimo (~$7.000)
-                </option>
-                <option className="text-slate-900" value="4000">
-                  Caja Notarial base (~$4.000)
-                </option>
+                <option value="0">Sin caja profesional</option>
+                <option value="7000">CJPPU mínimo (~$7.000)</option>
+                <option value="4000">Caja Notarial base (~$4.000)</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               Situación familiar para Fonasa
             </label>
             <select
-             className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
               value={situacionFonasa}
               onChange={(e) => setSituacionFonasa(e.target.value as SituacionFonasa)}
             >
-              <option className="text-slate-900" value="sinHijosSinConyuge">3% - 4,5% - Sin hijos ni cónyuge/concubino a cargo</option>
-              <option className="text-slate-900" value="conHijos">4,5% - 6% - Con hijos a cargo</option>
-              <option className="text-slate-900" value="conConyuge">4,5% - 6% - Con cónyuge/concubino a cargo</option>
-              <option className="text-slate-900" value="conHijosYConyuge">6% - 8% - Con hijos y cónyuge/concubino a cargo</option>
+              <option value="sinHijosSinConyuge">3% - 4,5% - Sin hijos ni cónyuge/concubino a cargo</option>
+              <option value="conHijos">4,5% - 6% - Con hijos a cargo</option>
+              <option value="conConyuge">4,5% - 6% - Con cónyuge/concubino a cargo</option>
+              <option value="conHijosYConyuge">6% - 8% - Con hijos y cónyuge/concubino a cargo</option>
             </select>
-            <p className="mt-1 text-xs text-white/50">
-              Estos datos se usan solo para estimar el porcentaje de Fonasa. El % depende si ganas más o menos de 2,5 BPC.
+            <p className="mt-1 text-xs text-gray-500">
+              Datos para estimar Fonasa según si ganás más o menos de 2,5 BPC.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="w-full md:w-40">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Porcentaje aplicado
               </label>
               <select
-               className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={porcentajePersonasACargo}
                 onChange={(e) => setPorcentajePersonasACargo(e.target.value)}
               >
-                <option className="text-slate-900" value="100">
-                  100%
-                </option>
-                <option className="text-slate-900" value="50">
-                  50%
-                </option>
-                <option className="text-slate-900" value="0">
-                  0%
-                </option>
+                <option value="100">100%</option>
+                <option value="50">50%</option>
+                <option value="0">0%</option>
               </select>
             </div>
 
             <div className="w-full md:w-40">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Hijos sin discapacidad
               </label>
               <select
-              className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 onChange={(e) => setHijos(e.target.value)}
               >
                 {["0", "1", "2", "3", "4", "5"].map((opt) => (
-                  <option key={opt} className="text-slate-900" value={opt}>
+                  <option key={opt} value={opt}>
                     {opt}
                   </option>
                 ))}
@@ -419,16 +380,16 @@ export default function CalcularDescuentosPage() {
             </div>
 
             <div className="w-full md:w-40">
-              <label className="block text-xs font-medium text-white/70 mb-1">
+              <label className="block text-xs font-bold text-gray-700 mb-1">
                 Hijos con discapacidad
               </label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={hijosDiscapacidad}
                 onChange={(e) => setHijosDiscapacidad(e.target.value)}
               >
                 {["0", "1", "2", "3", "4", "5"].map((opt) => (
-                  <option key={opt} className="text-slate-900" value={opt}>
+                  <option key={opt} value={opt}>
                     {opt}
                   </option>
                 ))}
@@ -439,156 +400,75 @@ export default function CalcularDescuentosPage() {
       </section>
 
       {resultado && (
-        <section className="pt-4 space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row">
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 md:flex-1">
-              <p className="text-xs uppercase tracking-wide text-white/60">
-                Sueldo líquido
+        <section className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-8 border border-white/10">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl bg-white/10 border border-white/15 p-5">
+              <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">
+                Sueldo líquido en mano
               </p>
-              <p className="mt-1 text-3xl font-semibold text-emerald-300">
+              <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
                 {`$ ${resultado.sueldoLiquido.toLocaleString("es-UY", {
                   maximumFractionDigits: 2,
                 })}`}
               </p>
+              <p className="text-xs text-gray-300 mt-1">Importe neto estimado</p>
             </div>
 
-            <div className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 md:w-64">
-              <p className="text-xs uppercase tracking-wide text-white/60">
-                Total de descuentos e impuestos
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+              <p className="text-xs uppercase tracking-wider text-red-300 font-bold">
+                Total descuentos e impuestos
               </p>
-              <p className="mt-1 text-3xl font-semibold text-red-200">
-                {`$ ${resultado.totalDescuentos.toLocaleString("es-UY", {
+              <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-red-400 font-mono">
+                {`- $ ${resultado.totalDescuentos.toLocaleString("es-UY", {
                   maximumFractionDigits: 2,
                 })}`}
               </p>
+              <p className="text-xs text-gray-400 mt-1">BPS, FONASA, FRL e IRPF</p>
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl border border-red-400/40 bg-red-500/10 p-3">
-            <div className="grid gap-2 sm:grid-cols-2 text-xs text-white/70">
-              <p>
-                Sueldo nominal:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${baseNominal.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+            <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Sueldo nominal:</span>
+                <span className="font-bold text-white font-mono">
+                  {`$ ${baseNominal.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </span>
-              </p>
-              <p>
-                BPS (15%):{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.aporteJubilatorio.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">BPS (15%):</span>
+                <span className="font-bold text-white font-mono">
+                  {`$ ${resultado.aporteJubilatorio.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </span>
-              </p>
-              <p>
-                Fonasa:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.aporteFonasa.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Fonasa:</span>
+                <span className="font-bold text-white font-mono">
+                  {`$ ${resultado.aporteFonasa.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </span>
-              </p>
-              <p>
-                FRL (0,10%):{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.aporteFrl.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">FRL (0,10%):</span>
+                <span className="font-bold text-white font-mono">
+                  {`$ ${resultado.aporteFrl.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </span>
-              </p>
-              <p>
-                IRPF estimado:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.aporteIrpf.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">IRPF estimado:</span>
+                <span className="font-bold text-white font-mono">
+                  {`$ ${resultado.aporteIrpf.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </span>
-              </p>
-              <p>
-                Tipo de trabajador:{" "}
-                <span className="font-semibold text-white">
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Tipo de trabajador:</span>
+                <span className="font-bold text-white">
                   {regimenLaboral === "industria" ? "Industria y comercio" : "Jornalero"}
                 </span>
-              </p>
-              <p>
-                Fondo de solidaridad:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${fondoSolidaridadNum.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Adicional fondo:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${adicionalFondoNum.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Aporte CJPPU / Caja Notarial:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${aporteCajaProfesionalNum.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Deducción por hijos:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${deduccionHijos.toLocaleString("es-UY", {
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Porcentaje aplicado:{" "}
-                <span className="font-semibold text-white">
-                  {`${porcentajePersonasACargoNum}%`}
-                </span>
-              </p>
-              {deduccionHijos > 0 && resultado.aporteIrpf === 0 && (
-                <p className="text-[11px] text-white/60">
-                  Tu IRPF ya quedó en 0 gracias a las deducciones por hijos.
-                </p>
-              )}
+              </div>
             </div>
-            <p className="pt-2 text-[11px] text-white/50">
-              Esta herramienta es orientativa y simplifica la normativa actual. Para un cálculo más preciso podés
-              consultar herramientas especializadas o a tu contador.
+            <p className="pt-3 text-[11px] text-gray-400">
+              Esta herramienta es orientativa y simplifica la normativa actual vigente de Uruguay.
             </p>
-          </div>
-
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-white/80">
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-white/60">
-                Valor líquido aproximado por día
-              </p>
-              <p className="mt-1 text-xl font-semibold text-white">
-                {`$ ${(resultado.sueldoLiquido / (tipoPago === "jornal" && jornalesNum > 0 ? jornalesNum : 30)).toLocaleString("es-UY", {
-                  maximumFractionDigits: 2,
-                })}`}
-              </p>
-              <p className="text-[11px] text-white/50">
-                Calculado en base a {tipoPago === "jornal" && jornalesNum > 0 ? jornalesNum : 30} días al mes.
-              </p>
-            </div>
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-white/60">
-                Valor líquido aproximado por hora
-              </p>
-              <p className="mt-1 text-xl font-semibold text-white">
-                {`$ ${(resultado.sueldoLiquido / (tipoPago === "jornal" && jornalesNum > 0 ? jornalesNum : 30) / 8).toLocaleString("es-UY", {
-                  maximumFractionDigits: 2,
-                })}`}
-              </p>
-              <p className="text-[11px] text-white/50">
-                Asumiendo jornadas de 8 horas.
-              </p>
-            </div>
           </div>
         </section>
       )}

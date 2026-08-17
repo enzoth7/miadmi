@@ -2,16 +2,24 @@ import "./globals.css";
 import { Suspense } from "react";
 import AppChrome from "../components/AppChrome";
 import { SessionProvider } from "../components/SessionProvider";
-import FeedbackWidget from "./components/FeedbackWidget";
 import { Analytics } from '@vercel/analytics/next';
 import InstallPWAButton from "./components/InstallPWAButton";
 
-
-
 export const metadata = {
   title: "Finanzas personales para Uruguay | Mi Admi",
-  description:
-    "Ordená tus finanzas en sin ser experto. Registrá gastos, estimá tu próximo mes y tomá mejores decisiones con Mi Admi.",
+  description: "Ordená tus finanzas sin ser experto. Registrá gastos, estimá tu próximo mes y tomá mejores decisiones con Mi Admi.",
+  keywords: "finanzas, uruguay, gastos, sueldo, aguinaldo, presupuesto",
+  openGraph: {
+    title: "Mi Admi - Finanzas Personales en Uruguay",
+    description: "Ordená tus finanzas sin ser experto. Registrá gastos y estimá tu próximo mes.",
+    url: "https://miadmi.com",
+    siteName: "Mi Admi",
+    locale: "es_UY",
+    type: "website",
+  },
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -28,15 +36,16 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <meta name="geo.region" content="UY" />
+        <meta name="geo.placename" content="Uruguay" />
 
       </head>
-      <body className="min-h-screen bg-[#0b1e3a] text-white antialiased">
+      <body className="min-h-screen bg-[#0b1e3a] text-[#F6F6F6] antialiased">
         <SessionProvider>
           <Suspense fallback={null}>
             <AppChrome>{children}</AppChrome>
           </Suspense>
         </SessionProvider>
-        <FeedbackWidget />
         <InstallPWAButton />
         <Analytics />
         

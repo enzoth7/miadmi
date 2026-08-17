@@ -56,78 +56,71 @@ export default function SeguroDesempleoPage() {
   const mostrarTabla = esInvoluntario && cumpleRequisitoPlanilla && basePromedio > 0 && montos.length > 0;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-4">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">Calculadora de seguro de desempleo</h1>
-        <p className="text-sm text-white/70">
-          Estima de forma aproximada cuanto podrias cobrar de subsidio por desempleo (seguro de paro) si sos trabajador
-          mensual de Industria y Comercio. No contempla todos los casos ni topes de BPS.
+    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+      <header className="space-y-3">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+          Calculadora de seguro de desempleo
+        </h1>
+        <p className="text-sm text-gray-600">
+          Estimá de forma aproximada cuánto podrías cobrar de subsidio por desempleo (seguro de paro) a través del BPS.
         </p>
-        <p className="text-[12px] text-white/50">
-          Esta herramienta esta pensada para trabajadores mensuales de Industria y Comercio. No aplica para rural,
-          construccion ni regimenes especiales.
-        </p>
+
+        <div className="inline-flex items-center rounded-full bg-gray-100 p-1.5 border border-gray-200 mt-2">
+          <button
+            type="button"
+            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+              motivoEgreso === "involuntario"
+                ? "bg-[#0b1e3a] text-white shadow"
+                : "text-gray-600 hover:text-black"
+            }`}
+            onClick={() => setMotivoEgreso("involuntario")}
+          >
+            Me despidieron / Fin contrato
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+              motivoEgreso === "renuncia"
+                ? "bg-[#0b1e3a] text-white shadow"
+                : "text-gray-600 hover:text-black"
+            }`}
+            onClick={() => setMotivoEgreso("renuncia")}
+          >
+            Renuncié
+          </button>
+        </div>
       </header>
 
-      <div className="inline-flex items-center rounded-full bg-white/5 p-1">
-        <button
-          type="button"
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            motivoEgreso === "involuntario"
-              ? "bg-emerald-500 text-slate-900 shadow"
-              : "text-white/70 hover:text-white"
-          }`}
-          onClick={() => setMotivoEgreso("involuntario")}
-        >
-          Me despidieron / Fin del contrato
-        </button>
-        <button
-          type="button"
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            motivoEgreso === "renuncia"
-              ? "bg-emerald-500 text-slate-900 shadow"
-              : "text-white/70 hover:text-white"
-          }`}
-          onClick={() => setMotivoEgreso("renuncia")}
-        >
-          Renuncié
-        </button>
-      </div>
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white mt-6">Ingresa tus datos</h2>
+      <section className="space-y-4 pt-2">
+        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">
-              Dias en planilla en los ultimos 12 meses (Industria y Comercio)
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Días en planilla en los últimos 12 meses (mínimo 180 días)
             </label>
             <input
               type="number"
-              className="w-full bg-white/5 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+              className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
               value={diasPlanilla}
               onChange={(e) => setDiasPlanilla(e.target.value)}
             />
-            <p className="mt-1 text-xs text-white/50">
-              En general, para tener derecho al subsidio tenes que haber estado al menos 180 dias en planilla en los
-              ultimos 12 meses.
-            </p>
             {diasPlanillaNum > 0 && (
-              <p className={`mt-1 text-xs ${cumpleRequisitoPlanilla ? "text-emerald-300" : "text-red-300"}`}>
+              <p className={`mt-1 text-xs font-semibold ${cumpleRequisitoPlanilla ? "text-emerald-700" : "text-red-600"}`}>
                 {cumpleRequisitoPlanilla
-                  ? "Con estos datos, pareceria que cumples el requisito de dias en planilla."
-                  : "Con estos datos, pareceria que no cumples el requisito minimo de dias en planilla para el seguro de desempleo."}
+                  ? "✓ Cumplís con el requisito mínimo de 180 días en planilla."
+                  : "✗ No alcanzás el requisito mínimo de 180 días para acceder al subsidio."}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-white">Tipo de sueldo</p>
-            <div className="inline-flex items-center rounded-full bg-white/5 p-1 text-xs font-medium text-white/70">
+            <p className="text-xs font-bold text-gray-700">Tipo de sueldo</p>
+            <div className="inline-flex items-center rounded-full bg-gray-100 p-1 border border-gray-200 text-xs font-bold text-gray-600">
               <button
                 type="button"
-                className={`rounded-full px-3 py-1 transition ${
-                  tipoSueldo === "fijo" ? "bg-emerald-500 text-slate-900 shadow" : "text-white/70 hover:text-white"
+                className={`rounded-full px-4 py-1.5 transition-all ${
+                  tipoSueldo === "fijo" ? "bg-[#0b1e3a] text-white shadow" : "hover:text-black"
                 }`}
                 onClick={() => setTipoSueldo("fijo")}
               >
@@ -135,10 +128,8 @@ export default function SeguroDesempleoPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-full px-3 py-1 transition ${
-                  tipoSueldo === "variable"
-                    ? "bg-emerald-500 text-slate-900 shadow"
-                    : "text-white/70 hover:text-white"
+                className={`rounded-full px-4 py-1.5 transition-all ${
+                  tipoSueldo === "variable" ? "bg-[#0b1e3a] text-white shadow" : "hover:text-black"
                 }`}
                 onClick={() => setTipoSueldo("variable")}
               >
@@ -149,38 +140,36 @@ export default function SeguroDesempleoPage() {
 
           {tipoSueldo === "fijo" && (
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Sueldo nominal mensual</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Sueldo nominal mensual</label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-white/60">$</span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 font-bold text-[#0b1e3a]">
+                  $
+                </div>
                 <input
                   type="number"
                   inputMode="decimal"
-                  className="w-full bg-white/5 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                   placeholder="Ej: 35.000"
                   value={sueldoMensual}
                   onChange={(e) => setSueldoMensual(e.target.value)}
                 />
               </div>
-              <p className="mt-1 text-xs text-white/50">
-                Usa tu sueldo nominal mensual promedio de los ultimos meses.
-              </p>
             </div>
           )}
 
           {tipoSueldo === "variable" && (
             <div className="space-y-2">
-              <p className="text-xs text-white/70">
-                Ingresa los sueldos nominales de los ultimos 6 meses que trabajaste. Vamos a calcular un promedio
-                mensual y usarlo como base para el subsidio.
+              <p className="text-xs text-gray-600">
+                Ingresá los sueldos nominales de los últimos 6 meses para calcular el promedio.
               </p>
               <div className="grid gap-3 md:grid-cols-3">
                 {["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6"].map((label, index) => (
                   <div key={label} className="space-y-1">
-                    <label className="block text-xs font-medium text-white/70">{label}</label>
+                    <label className="block text-xs font-bold text-gray-700">{label}</label>
                     <input
                       type="number"
                       inputMode="decimal"
-                      className="w-full bg-white/5 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                       placeholder="0"
                       value={meses[index]}
                       onChange={(e) => updateMes(index, e.target.value)}
@@ -194,57 +183,52 @@ export default function SeguroDesempleoPage() {
       </section>
 
       {esRenuncia && (
-        <div className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-xs text-white/80">
-          <p className="font-semibold text-red-200">En la renuncia voluntaria no corresponde subsidio por desempleo.</p>
-          <p className="mt-1">
-            El seguro de paro aplica cuando quedas sin trabajo contra tu voluntad (despido o termino de contrato) y
-            cumples con los requisitos de dias en planilla.
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-xs text-red-900">
+          <p className="font-bold text-sm text-red-950 mb-1">En la renuncia voluntaria no corresponde seguro de desempleo.</p>
+          <p>
+            El subsidio de paro aplica cuando quedás sin trabajo de forma involuntaria (despido o fin de contrato) y cumplís los 180 días en planilla.
           </p>
         </div>
       )}
 
       {esInvoluntario && (
-        <section className="space-y-3">
+        <section className="space-y-4">
           {mostrarTabla ? (
-            <>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-white/60">Base de calculo (promedio mensual)</p>
-                <p className="mt-1 text-3xl font-semibold text-emerald-300">
+            <div className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-6 border border-white/10">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">Base de cálculo (promedio mensual)</p>
+                <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
                   {`$ ${basePromedio.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
-                </p>
-                <p className="mt-1 text-xs text-white/60">
-                  Promedio de tus remuneraciones nominales de los ultimos 6 meses.
                 </p>
               </div>
 
-              <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
-                <p className="text-xs font-semibold text-white/80 mb-2">
-                  Monto nominal estimado del subsidio por desempleo (si cobrases los 6 meses completos)
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                <p className="text-xs font-bold text-gray-300 mb-3">
+                  Proyección mensual del subsidio por desempleo (escala decreciente BPS):
                 </p>
-                <div className="grid gap-2 sm:grid-cols-2 text-sm text-white/80">
-                  {montos.map((monto, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span>{`Mes ${index + 1}`}</span>
-                      <span className="font-semibold text-white">
-                        {`$ ${monto.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
-                      </span>
-                    </div>
-                  ))}
+                <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-300">
+                  {montos.map((monto, index) => {
+                    const pct = [66, 57, 50, 45, 42, 40][index];
+                    return (
+                      <div key={index} className="flex items-center justify-between py-1 border-b border-white/10">
+                        <span>{`Mes ${index + 1} (${pct}%):`}</span>
+                        <span className="font-bold text-white font-mono">
+                          {`$ ${monto.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              <p className="mt-2 text-[11px] text-white/50">
-                Este calculo es orientativo y no contempla topes minimos ni maximos del BPS, ni modalidades especiales
-                (seguro parcial, flexible, regimenes especiales). No sustituye el calculo oficial del BPS ni el
-                asesoramiento profesional.
+              <p className="pt-2 text-[11px] text-gray-400">
+                Cálculo orientativo simplificado de las escalas de BPS para trabajadores mensuales.
               </p>
-            </>
+            </div>
           ) : (
-            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/80">
-              <p className="font-semibold text-white">No podemos estimar el monto con los datos ingresados.</p>
-              <p className="mt-1 text-white/70">
-                Revisa que cumplas el requisito de dias en planilla y que el sueldo ingresado sea mayor a cero.
-              </p>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-xs text-gray-600">
+              <p className="font-bold text-gray-900 mb-1">Completá los datos para ver la proyección.</p>
+              <p>Revisá que cumplas con los días en planilla y el sueldo ingresado sea mayor a cero.</p>
             </div>
           )}
         </section>

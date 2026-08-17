@@ -164,23 +164,22 @@ export default function DespidoRenunciaPage() {
   const mostrarResultados = resultado.total > 0;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-8 text-white">
+    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
       <header className="space-y-3">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold">Calculadora de liquidación por despido o renuncia</h1>
-          <p className="text-sm text-white/70">
-            Ingresá tus datos para estimar, de forma aproximada, los montos de liquidación al terminar la relación
-            laboral. Esta herramienta simplifica varios conceptos legales y no reemplaza un cálculo profesional.
-          </p>
-        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+          Calculadora de liquidación por despido o renuncia
+        </h1>
+        <p className="text-sm text-gray-600">
+          Ingresá tus datos para estimar, de forma aproximada, los montos de liquidación al terminar la relación laboral.
+        </p>
 
-        <div className="inline-flex items-center rounded-full bg-white/5 p-1">
+        <div className="inline-flex items-center rounded-full bg-gray-100 p-1.5 border border-gray-200 mt-2">
           <button
             type="button"
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
               modoEgreso === "despido"
-                ? "bg-emerald-500 text-slate-900 shadow"
-                : "text-white/70 hover:text-white"
+                ? "bg-[#0b1e3a] text-white shadow"
+                : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setModoEgreso("despido")}
           >
@@ -188,10 +187,10 @@ export default function DespidoRenunciaPage() {
           </button>
           <button
             type="button"
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
               modoEgreso === "renuncia"
-                ? "bg-emerald-500 text-slate-900 shadow"
-                : "text-white/70 hover:text-white"
+                ? "bg-[#0b1e3a] text-white shadow"
+                : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setModoEgreso("renuncia")}
           >
@@ -200,251 +199,167 @@ export default function DespidoRenunciaPage() {
         </div>
       </header>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Ingresá tus datos</h2>
+      <section className="space-y-4 pt-2">
+        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-white/70 mb-1">Tipo de trabajador</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de trabajador</label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={tipoTrabajador}
                 onChange={(e) => setTipoTrabajador(e.target.value as TipoTrabajador)}
               >
-                <option className="text-slate-900" value="industria">
-                  Industria y comercio (empleado mensual)
-                </option>
-                <option className="text-slate-900" value="jornalero">
-                  Jornalero
-                </option>
+                <option value="industria">Industria y comercio (empleado mensual)</option>
+                <option value="jornalero">Jornalero</option>
               </select>
             </div>
 
             <div className="w-full md:w-48">
-              <label className="block text-xs font-medium text-white/70 mb-1">Tipo de pago</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de pago</label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value as TipoPago)}
               >
-                <option className="text-slate-900" value="mensual">
-                  Mensual
-                </option>
-                <option className="text-slate-900" value="jornal">
-                  Por jornal
-                </option>
+                <option value="mensual">Mensual</option>
+                <option value="jornal">Por jornal</option>
               </select>
-              <p className="mt-1 text-[11px] text-white/50">
-                Si elegís jornalero se fuerza el cálculo por jornal; industria se calcula como mensual.
-              </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/70 mb-1">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               {tipoTrabajador === "jornalero" ? "Jornal" : "Sueldo nominal"}
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-white/60">$</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 font-bold text-[#0b1e3a]">
+                $
+              </div>
               <input
                 type="number"
                 inputMode="decimal"
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
-                placeholder={tipoTrabajador === "jornalero" ? "Ej: 1.500" : "Ej: 35.000"}
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                placeholder={tipoTrabajador === "jornalero" ? "Ej: 1.500" : "Ej: 45.000"}
                 value={sueldoNominal}
                 onChange={(e) => setSueldoNominal(e.target.value)}
               />
             </div>
-            <p className="mt-1 text-xs text-white/50">
-              {tipoTrabajador === "jornalero"
-                ? "Es lo que ganás por día trabajado, sin aguinaldo ni primas. Abajo indicás cuántos jornales al mes trabajás."
-                : "Es el sueldo nominal que figura en tu recibo, antes de descuentos y sin primas."}
-            </p>
           </div>
 
-          {tipoPago === "jornal" && (
-            <div className="flex flex-col gap-2 md:flex-row md:items-end">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-white/70 mb-1">Jornales al mes</label>
-                <input
-                  type="number"
-                  className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
-                  value={jornalesMes}
-                  onChange={(e) => setJornalesMes(e.target.value)}
-                />
-              </div>
-              <p className="text-xs text-white/50 md:w-64">Podés estimar un promedio de 22 jornales al mes.</p>
-            </div>
-          )}
-
-
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Fecha de ingreso</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de ingreso</label>
               <input
                 type="date"
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={fechaIngreso}
                 onChange={(e) => setFechaIngreso(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Fecha de egreso</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de egreso</label>
               <input
                 type="date"
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={fechaEgreso}
                 onChange={(e) => setFechaEgreso(e.target.value)}
               />
             </div>
           </div>
-            <p className="text-[11px] text-white/50">
-            La antigüedad se usa para estimar la indemnización por despido: 1 sueldo por año o fracción mayor a 6 meses,
-            con tope de 6 sueldos.
-          </p>
-         
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Meses desde el último aguinaldo</label>
-              <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
-                value={mesesDesdeUltimoAguinaldo}
-                onChange={(e) => setMesesDesdeUltimoAguinaldo(e.target.value)}
-              >
-                {["0", "1", "2", "3", "4", "5", "6"].map((opt) => (
-                  <option key={opt} className="text-slate-900" value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-[11px] text-white/50">
-                Meses trabajados desde el último aguinaldo cobrado (junio o diciembre). Se usa para calcular el
-                aguinaldo proporcional.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Días de licencia no gozada</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Meses desde último aguinaldo (0 a 6)</label>
               <input
                 type="number"
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                min={0}
+                max={6}
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                value={mesesDesdeUltimoAguinaldo}
+                onChange={(e) => setMesesDesdeUltimoAguinaldo(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Días de licencia pendientes</label>
+              <input
+                type="number"
+                min={0}
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={diasLicenciaPendiente}
                 onChange={(e) => setDiasLicenciaPendiente(e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-white/50">
-                Días de licencia generados que todavía no tomaste. El salario vacacional se toma igual al valor de esta
-                licencia como aproximación.
-              </p>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-[1fr,200px] md:items-end">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Días trabajados en el mes de egreso</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Días trabajados mes de egreso</label>
               <input
                 type="number"
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                min={0}
+                max={30}
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={diasTrabajadosMesEgreso}
                 onChange={(e) => setDiasTrabajadosMesEgreso(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">¿Ya cobraste ese sueldo?</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">¿Ya cobraste ese sueldo?</label>
               <select
-                className="w-full bg-sky-950/40 border border-sky-500/30 rounded-[6px] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400 focus:ring-0"
+                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
                 value={yaCobroUltimoSueldo}
                 onChange={(e) => setYaCobroUltimoSueldo(e.target.value as "si" | "no")}
               >
-                <option className="text-slate-900" value="no">
-                  No
-                </option>
-                <option className="text-slate-900" value="si">
-                  Sí
-                </option>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
               </select>
-              <p className="mt-1 text-[11px] text-white/50">
-                Si ya te pagaron esos días, no se vuelven a sumar en el cálculo.
-              </p>
             </div>
           </div>
         </div>
       </section>
 
       {mostrarResultados && (
-        <section className="space-y-3 pt-2">
-          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
-            <p className="text-xs uppercase tracking-wide text-white/60">Monto estimado de liquidación por egreso</p>
-            <p className="mt-1 text-3xl font-semibold text-emerald-300">
+        <section className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-8 border border-white/10">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">Monto estimado de liquidación por egreso</p>
+            <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
               {`$ ${resultado.total.toLocaleString("es-UY", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}`}
             </p>
-            <p className="text-[13px] text-white/70">
-              Incluye sueldo mes, aguinaldo proporcional, licencia, salario vacacional y, si corresponde,
-              indemnización por despido.
+            <p className="text-xs text-gray-300 mt-1">
+              Incluye sueldo proporcional, aguinaldo, licencia, salario vacacional e indemnización si corresponde.
             </p>
           </div>
 
-          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
-            <div className="grid gap-2 sm:grid-cols-2 text-xs text-white/70">
-              <p>
-                Sueldo del mes de egreso:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.sueldoMes.toLocaleString("es-UY", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Aguinaldo proporcional:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.aguinaldoProporcional.toLocaleString("es-UY", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Licencia no gozada:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.licenciaNoGozada.toLocaleString("es-UY", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Salario vacacional (aprox.):{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.salarioVacacional.toLocaleString("es-UY", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-              </p>
-              <p>
-                Indemnización por despido:{" "}
-                <span className="font-semibold text-white">
-                  {`$ ${resultado.indemnizacionDespido.toLocaleString("es-UY", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </span>
-                {modoEgreso === "renuncia" && (
-                  <span className="block text-[11px] text-white/60">
-                    En la renuncia no hay indemnización por despido.
-                  </span>
-                )}
-              </p>
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+            <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Sueldo del mes de egreso:</span>
+                <span className="font-bold text-white font-mono">{`$ ${resultado.sueldoMes.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Aguinaldo proporcional:</span>
+                <span className="font-bold text-white font-mono">{`$ ${resultado.aguinaldoProporcional.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Licencia no gozada:</span>
+                <span className="font-bold text-white font-mono">{`$ ${resultado.licenciaNoGozada.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10">
+                <span className="text-gray-400">Salario vacacional (aprox.):</span>
+                <span className="font-bold text-white font-mono">{`$ ${resultado.salarioVacacional.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/10 sm:col-span-2">
+                <span className="text-gray-400">Indemnización por despido:</span>
+                <span className="font-bold text-yellow-400 font-mono">{`$ ${resultado.indemnizacionDespido.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+              </div>
             </div>
-            <p className="mt-2 text-[11px] text-white/50">
-              Esta herramienta es orientativa y simplifica la normativa laboral uruguaya. No contempla todos los casos
-              especiales (enfermedad, accidente, embarazo, notoria mala conducta, despidos especiales, etc.). Para un
-              cálculo preciso de tu situación podés consultar a un profesional o usar simuladores especializados.
+            <p className="pt-3 text-[11px] text-gray-400">
+              Esta herramienta es orientativa y simplifica la normativa laboral de Uruguay.
             </p>
           </div>
         </section>

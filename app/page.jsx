@@ -1,391 +1,323 @@
 "use client";
-import { useEffect, useState } from "react";
+
 import Link from "next/link";
-import HeroCarousel from "@/components/HeroCarousel";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  Calculator,
+  Gift,
+  BriefcaseBusiness,
+  ShieldCheck,
+  TrendingUp,
+  CalendarRange,
+  Sparkles,
+  CheckCircle2
+} from "lucide-react";
 
-
-const STEPS = [
+const FREE_TOOLS = [
   {
-    title: "Cargas tus primeros datos",
-    description:
-      "Respondé las primeras preguntas.",
+    id: "sueldo",
+    title: "Calculadora de Sueldo Líquido",
+    description: "Conocé tus descuentos exactos de BPS, FONASA, FRL e IRPF según tu situación familiar.",
+    href: "/herramientas/calcular-descuentos-salarios",
+    badge: "Más Utilizada",
+    icon: Calculator,
   },
   {
-    title: "Mirá la distribución de tu plata",
-    description:
-      "Mi Admi te muestra si llegás con holgura, justo o en rojo, y qué ajustes podrias hacer.",
+    id: "aguinaldo",
+    title: "Cálculo de Aguinaldo",
+    description: "Calculá tu medio aguinaldo de junio o diciembre con los aportes de ley descontados.",
+    href: "/herramientas/aguinaldo",
+    badge: "Junio / Diciembre",
+    icon: Gift,
   },
   {
-    title: "Tomá las decisiones mas facilmente",
-    description:
-      "Con un panorama completo, fácil y sencillo, decidí que caminos tomar.",
-  },
-];
-
-const QUICK_TOOLS = [
-  {
-    title: "Calculá tu sueldo, aguinaldo y más",
-    description:
-      "Herramientas puntuales para sacarte dudas en segundos. Actualizado a las últimas leyes y deducciones.",
-    href: "/herramientas",
-    cta: "Ver herramientas",
+    id: "despido",
+    title: "Despido y Renuncia",
+    description: "Estimá tu liquidación final por despido común, renuncia voluntaria o despido abusivo.",
+    href: "/herramientas/despido-renuncia",
+    badge: "Laboral",
+    icon: BriefcaseBusiness,
   },
   {
-    title: "Mirá tu fin de mes en 30 segundos",
-    description:
-      "Respondé cinco preguntas y obtené una estimación orientativa de cómo terminás el mes.",
-    href: "/estima-tu-mes",
-    cta: "Estimar mi mes",
-  },
-] 
-
-const FEATURE_CARDS = [
-  {
-    title: "Estimación mes a mes",
-    description:
-      "Proyectá el saldo del próximo mes sin fórmulas raras ni planillas eternas.",
+    id: "desempleo",
+    title: "Seguro de Desempleo",
+    description: "Proyectá cuánto te corresponde cobrar mes a mes a través del BPS si te quedás sin trabajo.",
+    href: "/herramientas/seguro-desempleo",
+    badge: "Subsidio BPS",
+    icon: ShieldCheck,
   },
   {
-    title: "Control mensual simple",
-    description:
-      "Seguimiento diario pensado para personas que prefieren tocar botones y no celdas.",
+    id: "inversiones",
+    title: "Simulador de Inversiones",
+    description: "Compará rendimientos en UI, Letras de Regulación Monetaria, Plazo Fijo y Fondos.",
+    href: "/herramientas/inversiones",
+    badge: "Rendimientos",
+    icon: TrendingUp,
   },
   {
-    title: "Herramientas",
-    description:
-      "Calculá tu aguinaldo, tu salario y una posible liquidación o seguro de desempleo del BPS. Todo en 20 segundos.",
-  },
-  {
-    title: "Sin marearte con Excel",
-    description:
-      "Todo está guiado paso a paso. Si sabés usar WhatsApp, podés usar Mi Admi.",
-  },
-];
-
-const AUDIENCE_ITEMS = [
-  "Personas que no saben cómo llegar a fin de mes.",
-  "Quienes no saben en qué se les va la plata.",
-  "Los que quieran tener todo en un solo lugar y completo.",
-  "Quienes nunca pudieron mantener un Excel más de una semana.",
-];
-
-const PAYMENT_POINTS = [
-  "Controlá ingresos, gastos y estimaciones desde el primer día con las funciones simples.",
-  "Empezá gratis con lo esencial para tu mes.",
-  "Sumá las herramientas premium cuando requieras funciones más avanzadas.",
-];
-
-const TESTIMONIALS = [
-  {
-    quote:
-      "Por primera vez siento que tengo claro cuánto voy a tener y en qué puedo gastar sin culpa.",
-    name: "Giuliano",
-    role: "Freelancer independiente",
-  },
-  {
-    quote:
-      "Mi Admi me ordenó pasado, presente y futuro en un solo lugar. Es mucho más simple que Excel.",
-    name: "Cristian",
-    role: "Co-fundador de JMF",
-  },
-  {
-    quote:
-      "Puedo calcular rápido mi sueldo y finanzas en segundos, me ahorra mucho tiempo.",
-    name: "Joaquín",
-    role: "Analista en finanzas",
+    id: "control",
+    title: "Control Mensual de Gastos",
+    description: "Organizá tus ingresos y egresos fijos del mes para saber exactamente cuánto podés ahorrar.",
+    href: "/control-mensual",
+    badge: "Organización",
+    icon: CalendarRange,
   },
 ];
 
 export default function LandingPage() {
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
-
-
-
   return (
-
-
-
-
-
-<div className="px-4 py-10 text-white lg:px-8">
-  <section className="mx-auto mb-10 max-w-3xl space-y-6 text-center">
-  <div className="flex flex-col items-center space-y-2">
-    <h2 className="text-3xl font-semibold sm:text-4xl">
-      Asistente de finanzas personales 
-    </h2>
-
-    <p className="text-base text-white/80 sm:text-lg">
-      Mi Admi te organiza la plata y te da control sobre tu futuro.
-    </p>
-  </div>
-</section>
-
-
-  <div className="-mx-4 mb-16 lg:-mx-8">
-        <HeroCarousel />
-      </div>
-      <div className="mx-auto flex max-w-6xl flex-col gap-16">
-        <section className="mt-6 mb-16">
-          <div className="relative mx-auto flex flex-col items-center -mb-4">
-            {/* Texto principal */}
-            <p
-              className="
-        text-center 
-        text-3xl sm:text-5xl 
-        font-semibold 
-        text-white 
-        drop-shadow-[0_0_22px_rgba(0,0,0,0.9)]
-        tracking-tight
-      "
-            >
-              "Hecho en Uruguay, pensado para uruguayos."
-            </p>
-
-            {/* Reflejo */}
-            <p
-              className="
-        mt-1
-        text-3xl sm:text-5xl 
-        font-semibold 
-        text-white/20 
-        blur-sm 
-        scale-y-[-1]
-      "
-              aria-hidden="true"
-            >
-              "Hecho en Uruguay, pensado para uruguayos."
-            </p>
-          </div>
-        </section>
-
-     
-
-
-
-
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-              Cómo funciona
-            </p>
-            <h2 className="text-3xl font-semibold">3 pasos y listo</h2>
-            <p className="text-base text-white/80">
-              Sin planillas complicadas: llenás los datos básicos y Mi Admi hace
-              el resto.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {STEPS.map((step, index) => (
-              <article
-                key={step.title}
-                className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-black/10"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-lg font-semibold text-emerald-200">
-                  {String(index + 1).padStart(2, "0")}
-                </div>
-                <h3 className="text-xl font-semibold">{step.title}</h3>
-                <p className="mt-2 text-base text-white/70">{step.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-          Sin registrarte
-        </p>
-        <h2 className="text-3xl font-semibold">Probá ahora</h2>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {QUICK_TOOLS.map((item) => (
-          <article
-            key={item.href}
-            className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg shadow-black/10"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/60">
-              {item.label}
-            </p>
-
-            <h3 className="mt-2 text-2xl font-semibold">{item.title}</h3>
-            <p className="mt-2 text-base text-white/70">{item.description}</p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <a
-                href={item.href}
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-              >
-                {item.cta}
-              </a>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <p className="text-sm text-white/60">
-        * Estas herramientas son estimaciones orientativas.
-      </p>
-    </section>
-
-
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-              Beneficios
-            </p>
-            <h2 className="text-3xl font-semibold">Pensado para la vida real</h2>
-            <p className="text-base text-white/80">
-              Herramientas para quienes quieren claridad rápida sobre su plata.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {FEATURE_CARDS.map((feature) => (
-              <article
-                key={feature.title}
-                className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-black/10"
-              >
-                <h3 className="text-xl font-semibold">{feature.title}</h3>
-                <p className="mt-2 text-base text-white/70">
-                  {feature.description}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-<section className="grid gap-6 rounded-3xl border border-emerald-400/25 bg-slate-900/60 p-8 shadow-[0_18px_50px_rgba(0,0,0,0.6)] md:grid-cols-2">
-  {/* Texto a la izquierda */}
-  <div className="space-y-4">
-    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-      Hecho para Uruguay
-    </p>
-    <h2 className="text-3xl font-semibold">
-      Todo en pesos uruguayos, con lógica local
-    </h2>
-    <p className="text-white/80">
-      Sueldos con aguinaldo, tarjetas en cuotas, aportes y feriados:
-      Mi Admi habla tu idioma y entiende tu calendario.
-    </p>
-    <ul className="space-y-2 text-base text-white/80">
-      <li>• Moneda por defecto en UYU.</li>
-      <li>• Recordatorios cuando se acerca el aguinaldo.</li>
-      <li>• Categorías ya pensadas para la realidad local.</li>
+    <main className="min-h-screen font-sans selection:bg-[#FACC15] selection:text-[#0b1e3a] w-full">
       
-    </ul>
-  </div>
+      {/* =========================================================================
+          FRANJA 1: HERO (Azul Oscuro #0b1e3a con Imagen 3D y 2 Botones Limpios)
+          ========================================================================= */}
+      <section className="w-full bg-[#0b1e3a] text-white py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/10">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+            
+            {/* Columna Izquierda */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="lg:col-span-7 flex flex-col items-start text-left"
+            >
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight mb-6">
+                Tus finanzas y sueldo, calculados al instante.
+              </h1>
 
-  {/* Imagen a la derecha, usando 1536x1024 sin deformar */}
-  <div className="flex items-center justify-center">
-    <Image
-      src="/Image1.png"
-      alt="Gastos del mes en Uruguay - Mi Admi"
-      width={1536}
-      height={1024}
-      className="w-full max-w-[480px] h-auto rounded-3xl object-cover"
-    />
-  </div>
-</section>
+              <p className="text-lg sm:text-xl text-gray-300 font-normal leading-relaxed mb-8 max-w-2xl">
+                Calculá tu sueldo líquido, aguinaldos y beneficios laborales en Uruguay. Sin complicaciones ni planillas confusas.
+              </p>
 
+              {/* LOS DOS BOTONES PRINCIPALES (SIN FLECHAS, SIN SPANS) */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto mb-8">
+                <Link
+                  href="/herramientas/calcular-descuentos-salarios"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FACC15] px-8 py-4 text-base font-bold text-[#0b1e3a] transition-all hover:bg-yellow-300 hover:scale-[1.03] active:scale-[0.98] shadow-lg shadow-yellow-500/20"
+                >
+                  <Calculator className="w-5 h-5" />
+                  Calcular tu sueldo
+                </Link>
 
+                <Link
+                  href="/login?mode=login"
+                  className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-all hover:bg-yellow-400 hover:text-black hover:scale-[1.02] shadow-lg"
+                >
+                  Probar todas las funcionalidades
+                </Link>
+              </div>
 
-        <section className="space-y-4 rounded-3xl border border-emerald-400/25 bg-slate-900/60 p-8 shadow-[0_18px_50px_rgba(0,0,0,0.6)]">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-              ¿Para quién es?
-            </p>
-            <h2 className="text-3xl font-semibold">
-  Para quienes quieren dejar de adivinar
-</h2>
+              {/* Puntos de Confianza (Sin tags span) */}
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-gray-400 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-yellow-400" />
+                  100% Gratuito y Libre
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-yellow-400" />
+                  Sin registro obligatorio
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-yellow-400" />
+                  Leyes BPS & IRPF al día
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Columna Derecha: Nueva Imagen 3D Ilustrativa de Finanzas con Animación Flotante */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
+              className="lg:col-span-5 w-full flex justify-center"
+            >
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="relative w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white"
+              >
+                <Image
+                  src="/portada.png"
+                  alt="Mi Admi Panel Financiero Uruguay"
+                  width={600}
+                  height={450}
+                  className="w-full h-auto object-cover bg-white"
+                  priority
+                />
+              </motion.div>
+            </motion.div>
+
           </div>
-          <ul className="space-y-3 text-white/90">
-  {AUDIENCE_ITEMS.map((item) => (
-    <li key={item} className="flex gap-3 text-base leading-snug">
-      <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400" />
-      <span>{item}</span>
-    </li>
-  ))}
-</ul>
-        </section>
+        </div>
+      </section>
 
-        <section className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent p-8">
-          <div className="w-full space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">
-              ¿CUÁNTO CUESTA?
-            </p>
-            <h2 className="text-3xl font-semibold">
-              Empezá gratis y sin compromiso
+      {/* =========================================================================
+          FRANJA 2: HERRAMIENTAS GRATUITAS (Blanco Puro #FFFFFF con Hover Dinámico)
+          ========================================================================= */}
+      <section className="w-full bg-[#FFFFFF] text-[#0b1e3a] py-20 sm:py-28 px-4 sm:px-6 lg:px-8 border-b border-gray-200">
+        <div className="mx-auto max-w-7xl">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#0b1e3a] mb-4">
+              Herramientas gratuitas para usar ya mismo.
             </h2>
-            <p className="text-base text-white/85">
-              Probá Mi Admi y usá las herramientas básicas sin pagar nada.
-Si te sirve y querés ir más a fondo, vas a poder acceder a funciones avanzadas
-de forma clara, transparente y sin sorpresas.
+            <p className="text-base sm:text-lg text-gray-600">
+              Elegí la calculadora que necesitás. Todos los cálculos son transparentes, directos y basados en la legislación uruguaya.
             </p>
-            <ul className="space-y-2 text-base text-white/80">
-              {PAYMENT_POINTS.map((point) => (
-                <li key={point}>• {point}</li>
-              ))}
-            </ul>
           </div>
-          <div className="text-center max-w-md mx-auto">
-  <div className="mt-3 flex items-center justify-center">
-    <span className="text-2xl text-amber-300" aria-hidden="true">
-      &#9733;&#9733;&#9733;&#9733;&#9733;
-    </span>
-  </div>
-  <p className="mt-4 text-sm text-white/90">
-    {TESTIMONIALS[activeTestimonial].quote}
-  </p>
-  <p className="mt-3 text-xs font-medium text-white/80">
-    {TESTIMONIALS[activeTestimonial].name}
-  </p>
-  <p className="text-[11px] text-white/60">
-    {TESTIMONIALS[activeTestimonial].role}
-  </p>
-  <div className="mt-4 flex justify-center gap-2">
-    {TESTIMONIALS.map((_, index) => (
-      <button
-        key={index}
-        type="button"
-        onClick={() => setActiveTestimonial(index)}
-        className={`h-2.5 w-2.5 rounded-full transition ${
-          index === activeTestimonial
-            ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-            : "bg-white/25 hover:bg-white/60"
-        }`}
-        aria-label={`Ver testimonio ${index + 1}`}
-      />
-    ))}
-  </div>
-</div>
-        </section>
 
-        <section className="text-center max-w-md mx-auto">
-          <h2 className="text-3xl font-semibold">Empezá hoy a ordenar tu plata</h2>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/login?mode=signup"
-              className="rounded-full bg-white px-8 py-3 text-base font-semibold text-gray-900 shadow-lg shadow-white/40 transition hover:bg-white/90"
-            >
-              Probar gratis
-            </Link>
-            <Link
-              href="/login?mode=login"
-              className="text-base font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline"
-            >
-              Iniciar sesión
-            </Link>
+          {/* Grilla de Contenedores Separados con Hover Animations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {FREE_TOOLS.map((tool, index) => {
+              const Icon = tool.icon;
+              return (
+                <motion.div
+                  key={tool.id}
+                  initial={{ opacity: 0, y: 25 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.4, delay: index * 0.06 }}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="flex flex-col justify-between rounded-3xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-2xl hover:border-yellow-400 transition-all duration-300 cursor-pointer group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0b1e3a]/5 text-[#0b1e3a] group-hover:bg-[#0b1e3a] group-hover:text-yellow-400 transition-colors duration-300">
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 group-hover:bg-yellow-100 group-hover:text-yellow-900 transition-colors">
+                        {tool.badge}
+                      </div>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-[#0b1e3a] mb-2.5 group-hover:text-blue-950 transition-colors">
+                      {tool.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                      {tool.description}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={tool.href}
+                    className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-gray-50 group-hover:bg-[#0b1e3a] text-sm font-bold text-[#0b1e3a] group-hover:text-white transition-all duration-300"
+                  >
+                    Abrir calculadora
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
-        </section>
-      </div>
-    </div>
+
+        </div>
+      </section>
+
+      {/* =========================================================================
+          FRANJA 3: HECHO PARA URUGUAY (Contenedores AMARILLOS con Letras NEGRAS y Hover)
+          ========================================================================= */}
+      <section className="w-full bg-[#0b1e3a] text-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 border-b border-white/10">
+        <div className="mx-auto max-w-7xl">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
+              Hecho para la realidad uruguaya.
+            </h2>
+            <p className="text-base sm:text-lg text-gray-300">
+              Sin configuraciones raras ni monedas extranjeras. Todo adaptado al sistema tributario local.
+            </p>
+          </div>
+
+          {/* 3 CONTENEDORES AMARILLOS CON LETRAS NEGRAS Y ANIMACIONES HOVER */}
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              whileHover={{ y: -8, scale: 1.03 }}
+              className="rounded-3xl bg-[#FACC15] text-[#0b1e3a] p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            >
+              <h3 className="text-2xl font-black text-[#0b1e3a] mb-3">
+                100% en Pesos y UI
+              </h3>
+              <p className="text-base font-medium text-gray-900 leading-relaxed">
+                Olvidate de convertir dólares o adaptar fórmulas. Cada cálculo y proyección opera nativamente en moneda uruguaya y Unidades Indexadas.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ y: -8, scale: 1.03 }}
+              className="rounded-3xl bg-[#FACC15] text-[#0b1e3a] p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            >
+              <h3 className="text-2xl font-black text-[#0b1e3a] mb-3">
+                Leyes e IRPF al Día
+              </h3>
+              <p className="text-base font-medium text-gray-900 leading-relaxed">
+                Franjas de IRPF, deducciones familiares, aportes a la seguridad social y normativas laborales permanentemente sincronizadas.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              whileHover={{ y: -8, scale: 1.03 }}
+              className="rounded-3xl bg-[#FACC15] text-[#0b1e3a] p-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+            >
+              <h3 className="text-2xl font-black text-[#0b1e3a] mb-3">
+                Cero Fricción
+              </h3>
+              <p className="text-base font-medium text-gray-900 leading-relaxed">
+                Sin planillas pesadas ni registros complicados. Ingresás tu monto, movés un control y tenés la respuesta limpia en segundos.
+              </p>
+            </motion.div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* =========================================================================
+          FRANJA 4: LLAMADO A LA ACCIÓN FINAL (Blanco Puro con Botón Amarillo)
+          ========================================================================= */}
+      <section className="w-full bg-[#FFFFFF] text-[#0b1e3a] py-20 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#0b1e3a] mb-6">
+              Empezá a ordenar tus finanzas hoy.
+            </h2>
+            <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-xl mx-auto">
+              Probá los calculadores gratuitos ahora mismo o creá tu cuenta para guardar tus estimaciones mes a mes.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/herramientas/calcular-descuentos-salarios"
+                className="w-full sm:w-auto rounded-full bg-[#FACC15] px-9 py-4 text-base font-bold text-[#0b1e3a] transition-all hover:bg-yellow-300 hover:scale-105 shadow-xl"
+              >
+                Calcular mi sueldo ahora
+              </Link>
+              <Link
+                href="/login?mode=login"
+                className="w-full sm:w-auto rounded-full border border-gray-300 bg-gray-50 px-8 py-4 text-base font-semibold text-[#0b1e3a] transition-all hover:bg-gray-100 hover:scale-102"
+              >
+                Iniciar sesión
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+    </main>
   );
 }
-

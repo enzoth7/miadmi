@@ -116,90 +116,55 @@ export default function Header() {
 
   return (
     <>
-    <header className="hidden md:block py-1">
-      <div className="flex flex-wrap items-center justify-center gap-4 lg:flex-nowrap">
+    <header className="hidden md:block w-full">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 text-[#0b1e3a]">
         <div className="flex items-center gap-3">
-          <BrandLogo />
+          <BrandLogo className="h-9 sm:h-10" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <PremiumBadge />
-          {!loading && user && !isPremium ? (
-            <Link
-              href="/paywall"
-              className="rounded-full bg-emerald-400 px-4 py-1 text-sm font-semibold text-gray-900 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
-
-            >
-              Mejorar a Premium
-            </Link>
-          ) : null}
-        </div>
-
-        <nav className="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-1 text-base font-semibold text-white/80 lg:justify-end lg:pl-8">
+        <nav className="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider lg:justify-center">
           {navItems.map((item) => {
-            const baseItemClasses =
-              "inline-flex items-center px-6 py-7 text-sm font-semibold tracking-wide rounded-[2px] transition-colors transition-transform duration-150";
-
             if (item.menu?.length) {
-              const activeClasses = isActive(item)
-                ? "bg-white/5 text-white"
-                : "text-white/80 hover:text-white hover:bg-white/5 hover:-translate-y-px";
               return (
                 <div key={item.id} className="relative group">
-                  <Link
-                    href={item.href}
-                    className={[baseItemClasses, activeClasses].join(" ")}
-                  >
+                  <Link href={item.href} className="px-3 py-1.5 text-[#0b1e3a] hover:text-blue-700 transition-colors">
                     {item.label}
                   </Link>
-                  <div
-  className="invisible absolute left-0 top-full z-20 mt-0 min-w-[220px] rounded-[2px]
-             border border-white/10 bg-[#050B18] opacity-0 shadow-lg transition
-             group-hover:visible group-hover:opacity-100"
->
-  {item.menu.map((subItem, index) => {
-    if (subItem.action) {
-      return (
-        <button
-          key={`action-${item.id}-${index}`}
-          type="button"
-          onClick={subItem.action}
-          className="block w-full px-4 py-2 text-left text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          {subItem.label}
-        </button>
-      );
-    }
-    return (
-      <Link
-        key={subItem.href ?? index}
-        href={subItem.href ?? "#"}
-        className="block w-full px-4 py-2 text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white"
-      >
-        {subItem.label}
-      </Link>
-    );
-  })}
-</div>
+                  <div className="invisible absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded-xl border border-gray-200 bg-white p-1.5 opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100">
+                    {item.menu.map((subItem, index) => {
+                      if (subItem.action) {
+                        return (
+                          <button key={index} type="button" onClick={subItem.action} className="block w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#0b1e3a] hover:bg-gray-100 transition-colors">
+                            {subItem.label}
+                          </button>
+                        );
+                      }
+                      return (
+                        <Link key={index} href={subItem.href ?? "#"} className="block w-full rounded-lg px-3 py-2 text-xs font-medium text-[#0b1e3a] hover:bg-gray-100 transition-colors">
+                          {subItem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             }
-
-            const activeClasses = isActive(item)
-              ? "bg-white/5 text-white"
-              : "text-white/80 hover:text-white hover:bg-white/5 hover:-translate-y-px";
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={[baseItemClasses, activeClasses].join(" ")}
-              >
+              <Link key={item.id} href={item.href} className="px-3 py-1.5 text-[#0b1e3a] hover:text-blue-700 transition-colors">
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
+        <div className="flex items-center gap-4">
+          <PremiumBadge />
+          {!loading && user && !isPremium && (
+            <Link href="/paywall" className="rounded-full bg-[#FACC15] px-4 py-1.5 text-xs font-bold text-[#0b1e3a] hover:bg-yellow-300 transition-colors shadow-sm">
+              Mejorar a Premium
+            </Link>
+          )}
+        </div>
       </div>
     </header>
 
