@@ -12,10 +12,7 @@ Permite a los usuarios organizar su dinero, estimar ingresos/egresos y acceder a
 - Next.js
 - React
 - TypeScript / JavaScript
-- Supabase
 - Vercel
-- MercadoPago (suscripciones)
-- Resend (emails)
 
 ---
 
@@ -49,7 +46,7 @@ No se recomienda deployar manualmente desde la CLI salvo casos puntuales.
 
 ---
 
-## 🔐 Variables de entorno
+## 🔧 Variables de entorno
 
 Las variables de entorno se manejan exclusivamente desde Vercel.
 Los archivos .env* están ignorados por Git.
@@ -60,7 +57,8 @@ Los archivos .env* están ignorados por Git.
 
 - MVP en producción
 - Iteración continua basada en feedback de usuarios
-- Funcionalidades premium activas
+- Todas las funciones son gratuitas y no requieren registro
+- Los datos financieros se guardan localmente en el navegador
 
 ---
 

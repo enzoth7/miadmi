@@ -1,576 +1,96 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import {
-  TrendingUp,
-  TrendingDown,
-  Lightbulb,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "../../lib/supabaseBrowser";
-import { LS_CUSTOM_CATEGORIES } from "../estimacion/especifica/constants";
+import Link from "next/link";
+import { useMemo } from "react";
+import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowDownRight, ArrowUpRight, CalendarDays, Car, CreditCard, GraduationCap, HeartPulse, Home, Lightbulb, Plane, ReceiptText, ShoppingCart, WalletCards } from "lucide-react";
+import { LS_CUSTOM_CATEGORIES, buildMonthLabels } from "../estimacion/especifica/constants";
 import { useHomeData } from "./useHomeData";
 import { useCustomCategoryLabels } from "./useCustomCategoryLabels";
 import { toNumber } from "./homeNumbers";
 import { normalizeEspecifica, normalizeGeneral, hasMeaningfulData } from "./homeNormalize";
 import { calculateTotals } from "./homeCalculations";
 import { buildConsejos } from "./homeConsejos";
+import { MetricCard, PageSurface, Reveal, StaggerGrid, StaggerItem } from "../../components/financial/FinancialPrimitives";
 
-
-
-
-
-const TOUR_STEPS = [
-  {
-    id: 1,
-    target: "#home-balance-card",
-    title: "Tu resumen del mes",
-    body: "Acá ves tus ingresos, gastos y si el mes cierra positivo o negativo.",
-  },
-  {
-    id: 2,
-    target: "#home-categories-chart",
-    title: "En qué se te va la plata",
-    body: "Este gráfico te muestra cuánto gastás por categoría.",
-  },
-  {
-    id: 3,
-    target: "#home-actions",
-    title: "Los consejos",
-    body: "Acá verás sugerencias generadas por nuestra IA. No reemplazan asesoramiento financiero, pero te pueden servir como guía para organizarte mejor",
-  },
-];
-
-const incomePalette = ["#064e3b", "#047857", "#0f766e", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
-const expensePalette = ["#991b1b", "#dc2626", "#ef4444", "#f97316", "#fb923c", "#facc15", "#fde047", "#a855f7", "#7c3aed", "#2563eb", "#38bdf8"];
-
-const SPECIFIC_INCOME_LABELS = {
-  sueldos: "Sueldos / Ingresos",
-  extraordinarios: "Ingresos extraordinarios",
-  devolucion: "Devolución de impuestos",
-  prestamosingresos: "Préstamos",
-  familia: "Familia",
-  otros: "Otros",
+const INCOME_LABELS = { sueldos: "Sueldos / Ingresos", extraordinarios: "Ingresos extraordinarios", devolucion: "Devolución de impuestos", prestamosingresos: "Préstamos", familia: "Familia", otros: "Otros" };
+const EXPENSE_LABELS = { super: "Supermercado", alquiler: "Alquiler / Hipoteca", gastosfijos: "Gastos fijos", gym: "Actividad física", otrasactividades: "Otras actividades", salud: "Salud y estética", transporte: "Transporte", generales: "Gastos generales", ropa: "Ropa", entretenimiento: "Entretenimiento", viajes: "Viajes", educacion: "Educación", adquisiciones: "Compras grandes", reparaciones: "Reparaciones", prestamos: "Préstamos", tarjetas: "Tarjetas" };
+const incomePalette = ["#0B1E3A", "#1D4ED8", "#60A5FA", "#FACC15", "#94A3B8"];
+const fmtUYU = (value) => new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(value || 0);
+const monthValue = (row, index, fallback) => {
+  const value = Array.isArray(row) ? row[index] : null;
+  return value === "" || value == null ? toNumber(fallback) : toNumber(value);
 };
+const objectTotal = (value) => Object.values(value || {}).reduce((sum, item) => sum + toNumber(item?.monto ?? item), 0);
 
-const SPECIFIC_EXPENSE_LABELS = {
-  super: "Super",
-  alquiler: "Alquiler / Hipoteca",
-  gastosfijos: "Gastos fijos",
-  gym: "Gym",
-  otrasactividades: "Otras actividades",
-  salud: "Salud y estética",
-  transporte: "Transporte / Combustible",
-  generales: "Gastos generales",
-  ropa: "Ropa",
-  entretenimiento: "Entretenimiento y salidas",
-  viajes: "Viajes",
-  educacion: "Educación",
-  adquisiciones: "Adquisiciones (compras grandes)",
-  reparaciones: "Reparaciones de vehículo",
-  prestamos: "Préstamos",
-  tarjetas: "Tarjetas",
-};
-
-const fmtUYU = (v, maxFrac = 0) =>
-  new Intl.NumberFormat("es-UY", {
-    style: "currency",
-    currency: "UYU",
-    maximumFractionDigits: maxFrac,
-  }).format(v || 0);
-
-export default function HomeClient() {
-  const router = useRouter();
-  const supabase = useMemo(() => supabaseBrowser(), []);
-  const verifyRef = useRef(false);
-
-  const { general, especifica, estimables, activeMode } = useHomeData(supabase);
-  const customCategoryLabels = useCustomCategoryLabels(LS_CUSTOM_CATEGORIES);
-
-  const [showTour, setShowTour] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const activeStep = showTour ? TOUR_STEPS.find((step) => step.id === currentStep) : null;
-  const activeTarget = activeStep?.target ?? null;
-  const highlightBalance = activeTarget === "#home-balance-card";
-  const highlightCategories = activeTarget === "#home-categories-chart";
-  const highlightActions = activeTarget === "#home-actions";
-  useEffect(() => {
-    if (!showTour || !activeTarget) return;
-    const el = document.querySelector(activeTarget);
-    if (el instanceof HTMLElement) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [showTour, activeTarget]);
-
-  const incomeLabelDictionary = useMemo(
-    () => ({ ...SPECIFIC_INCOME_LABELS, ...customCategoryLabels.ingresos }),
-    [customCategoryLabels.ingresos]
-  );
-  const expenseLabelDictionary = useMemo(
-    () => ({ ...SPECIFIC_EXPENSE_LABELS, ...customCategoryLabels.egresos }),
-    [customCategoryLabels.egresos]
-  );
-
-  const generalNormalized = useMemo(
-    () =>
-      normalizeGeneral(general, {
-        incomeLabels: incomeLabelDictionary,
-        expenseLabels: expenseLabelDictionary,
-      }),
-    [general, incomeLabelDictionary, expenseLabelDictionary]
-  );
-  const especificaNormalized = useMemo(
-    () =>
-      normalizeEspecifica(especifica, {
-        incomeLabels: incomeLabelDictionary,
-        expenseLabels: expenseLabelDictionary,
-      }),
-    [especifica, incomeLabelDictionary, expenseLabelDictionary]
-  );
-
-  const includeGeneral = activeMode === "general";
-  const activeModeLabel = includeGeneral ? "Simple" : "Avanzado";
-  const activeNormalized = includeGeneral ? generalNormalized : especificaNormalized;
-
-  const totals = useMemo(() => calculateTotals(activeNormalized), [activeNormalized]);
-  const ingresosTotales = totals.ingresosTotales;
-  const egresosTotales = totals.egresosTotales;
-  const resultado = totals.resultado;
-  const capacidadMensual = totals.capacidadMensual;
-  const saldoProyectado = totals.saldoProyectado;
-
-  const graficoIngresos = activeNormalized.ingresosPorCategoria;
-  const graficoEgresos = activeNormalized.egresosPorCategoria;
-
-  const gastoSobreIngreso =
-    ingresosTotales > 0
-      ? Math.round((egresosTotales / ingresosTotales) * 100)
-      : null;
-
-  const totalPrestamos = Array.isArray(estimables?.prestamos)
-    ? estimables.prestamos.reduce((acc, it) => acc + toNumber(it?.montoCuota), 0)
-    : 0;
-
-  const totalTarjetas = Array.isArray(estimables?.tarjetas)
-    ? estimables.tarjetas.reduce((acc, it) => acc + toNumber(it?.montoCuota), 0)
-    : 0;
-
-  const totalCompras = Array.isArray(estimables?.compras)
-    ? estimables.compras.reduce((acc, it) => acc + toNumber(it?.valor), 0)
-    : 0;
-
-  const totalEstimables = totalPrestamos + totalTarjetas + totalCompras;
-
-  const tieneGeneral = useMemo(
-    () => hasMeaningfulData(generalNormalized),
-    [generalNormalized]
-  );
-  const tieneEspecifica = useMemo(
-    () => hasMeaningfulData(especificaNormalized),
-    [especificaNormalized]
-  );
-
-  const consejos = useMemo(
-    () =>
-      buildConsejos({
-        totals,
-        activeNormalized,
-        generalNormalized,
-        especificaNormalized,
-        includeGeneral,
-        activeModeLabel,
-        graficoIngresos,
-        graficoEgresos,
-        totalPrestamos,
-        totalTarjetas,
-        totalCompras,
-        totalEstimables,
-        tieneGeneral,
-        tieneEspecifica,
-      }),
-    [
-      totals,
-      activeNormalized,
-      generalNormalized,
-      especificaNormalized,
-      includeGeneral,
-      activeModeLabel,
-      graficoIngresos,
-      graficoEgresos,
-      totalPrestamos,
-      totalTarjetas,
-      totalCompras,
-      totalEstimables,
-      tieneGeneral,
-      tieneEspecifica,
-    ]
-  );
-
-  useEffect(() => {
-    const key = "miadmi:onboarding-tour";
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored === "pending") {
-        setShowTour(true);
-        setCurrentStep(1);
-        localStorage.setItem(key, "done");
-      }
-    } catch {
-      // ignore storage errors
-    }
-  }, []);
-
-  useEffect(() => {
-    if (verifyRef.current) return;
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const subscriptionFlag = params.get("subscription");
-    const preapprovalId = params.get("preapproval_id");
-
-    if (subscriptionFlag !== "1" || !preapprovalId) return;
-    verifyRef.current = true;
-
-    (async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        await fetch("/api/mp/verify-subscription", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ preapproval_id: preapprovalId }),
-        });
-      } catch (err) {
-        console.error("Failed to verify subscription", err);
-      } finally {
-        params.delete("subscription");
-        params.delete("preapproval_id");
-        const nextParams = params.toString();
-        const nextUrl = nextParams ? `/home?${nextParams}` : "/home";
-        router.replace(nextUrl);
-      }
-    })();
-  }, [router, supabase]);
-
-const resumenCards = [
-  {
-    label: "Resultado del mes",
-    value: fmtUYU(resultado),
-    icon: resultado >= 0 ? TrendingUp : TrendingDown,
-    tone: resultado >= 0 ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50",
-    cardClass: resultado >= 0 ? "border-emerald-200 bg-emerald-100" : "border-rose-200 bg-rose-100",
-    description: resultado >= 0 ? "Superávit" : "Déficit",
-  },
-  {
-    label: "Ingresos totales",
-    value: fmtUYU(ingresosTotales),
-    icon: TrendingUp,
-    tone: "text-emerald-700 bg-emerald-100",
-    cardClass: "border-emerald-200 bg-emerald-100",
-    description: activeModeLabel,
-  },
-  {
-    label: "Egresos totales",
-    value: fmtUYU(egresosTotales),
-    icon: TrendingDown,
-    tone: "text-rose-700 bg-rose-100",
-    cardClass: "border-rose-200 bg-rose-100",
-    description:
-      gastoSobreIngreso != null
-        ? `${gastoSobreIngreso}% del ingreso activo`
-        : "Sin ingresos declarados",
-  },
-  {
-    label: "Capacidad mensual",
-    value: fmtUYU(capacidadMensual),
-    icon: resultado >= 0 ? TrendingUp : TrendingDown,
-    tone: resultado >= 0 ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50",
-    cardClass: resultado >= 0 ? "border-emerald-200 bg-emerald-100" : "border-rose-200 bg-rose-100",
-    description:
-      capacidadMensual >= 0
-        ? "Margen después del ahorro"
-        : "Revisá tus objetivos",
-  },
-];
-
-
-  return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-white/70">
-            {format(new Date(), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
-          </p>
-          <h2 className="mt-1 text-3xl font-semibold text-white">Hola de nuevo</h2>
-          <p className="text-sm text-white/80">
-            Consolidá tus ingresos y egresos para ver cómo evoluciona tu economía personal.
-          </p>
-        </div>
-     <div className="flex items-center gap-3 md:justify-end">
-  <span className="text-xs uppercase tracking-wide text-white/70">Modo activo</span>
-          <span
-  className={[
-    "rounded-full border px-3 py-1 text-sm font-semibold",
-    includeGeneral
-      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
-      : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-  ].join(" ")}
->
-  {activeModeLabel}
-</span>
-
-        </div>
-      </header>
-
-  <section
-    id="home-balance-card"
-    className={[
-      highlightBalance
-        ? "relative z-40 rounded-3xl bg-slate-900/90 ring-4 ring-emerald-300/80 ring-offset-2 ring-offset-slate-900 shadow-xl shadow-emerald-500/40 p-3 md:p-4"
-        : "p-0",
-    ].join(" ")}
-  >
-    <div className="mx-auto w-full max-w-7xl">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
-        {resumenCards.map((card) => (
-          <article
-            key={card.label}
-            className={`rounded-2xl border p-4 md:p-5 shadow-sm flex flex-col gap-2 md:gap-3 ${card.cardClass}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm md:text-lg font-medium text-slate-900">
-                {card.label}
-              </span>
-              <span
-                className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full ${card.tone}`}
-              >
-                <card.icon className="h-4 w-4" />
-              </span>
-            </div>
-            <div className="text-xl md:text-2xl font-semibold text-slate-900">
-              {card.value}
-            </div>
-            <p className="text-xs md:text-sm text-slate-600">{card.description}</p>
-          </article>
-        ))}
-      </div>
-    </div>
-  </section>
-
-
-
-
-
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article
-          id="home-categories-chart"
-          className={[
-            "rounded-2xl border border-slate-100 bg-emerald-100 p-6 text-slate-900 shadow-sm",
-            highlightCategories
-              ? "relative z-40 rounded-3xl bg-slate-900/90 ring-4 ring-emerald-300/80 ring-offset-2 ring-offset-white shadow-xl shadow-emerald-500/40"
-              : "",
-          ].join(" ")}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-2xl font-semibold">Distribución de ingresos</h3>
-            <span className="text-sm text-emerald-700">
-              {graficoIngresos.length ? `${graficoIngresos.length} categorías` : "Sin datos"}
-            </span>
-          </div>
-          <div className="h-[26rem]">
-            {graficoIngresos.length ? (
-              <ResponsiveContainer>
-                <PieChart margin={{ top: 8, bottom: 32 }}>
-                  <Pie
-                    data={graficoIngresos}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={70}
-                    outerRadius={120}
-                    paddingAngle={2}
-                  >
-                    {graficoIngresos.map((entry, index) => (
-                      <Cell key={entry.name} fill={incomePalette[index % incomePalette.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [fmtUYU(value), name]}
-                    contentStyle={{ borderRadius: 12, borderColor: "#d1fae5" }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    align="center"
-                    iconType="circle"
-                    height={32}
-                    wrapperStyle={{ color: "#065f46", fontSize: 15 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-emerald-200 text-sm text-emerald-700">
-                Registrá al menos un ingreso para ver la distribución.
-              </div>
-            )}
-          </div>
-        </article>
-
-        <article className="rounded-2xl border border-slate-100 bg-rose-100 p-6 text-slate-900 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-2xl font-semibold text-slate-900">Distribución de egresos</h3>
-            <span className="text-sm text-rose-700">
-              {graficoEgresos.length ? `${graficoEgresos.length} categorías` : "Sin datos"}
-            </span>
-          </div>
-          <div className="h-[26rem]">
-            {graficoEgresos.length ? (
-              <ResponsiveContainer>
-                <PieChart margin={{ top: 8, bottom: 10 }}>
-                  <Pie
-                    data={graficoEgresos}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={70}
-                    outerRadius={120}
-                    paddingAngle={2}
-                  >
-                    {graficoEgresos.map((entry, index) => (
-                      <Cell key={entry.name} fill={expensePalette[index % expensePalette.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [fmtUYU(value), name]}
-                    contentStyle={{ borderRadius: 12, borderColor: "#fecdd3" }}
-                  />
-                  <Legend
-  verticalAlign="bottom"
-  align="center"
-  iconType="circle"
-  wrapperStyle={{
-    color: "#7f1d1d",
-    fontSize: 15,
-    width: "100%",
-    whiteSpace: "normal",
-    lineHeight: "1.1",
-  }}
-/>
-
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-rose-200 text-sm text-rose-700">
-                Registrá egresos para identificar los rubros más pesados.
-              </div>
-            )}
-          </div>
-        </article>
-      </section>
-
-<section
-  id="home-actions"
-  className={[
-    "rounded-2xl border border-slate-100 bg-white p-6 shadow-sm",
-    highlightActions
-      ? "relative z-40 ring-4 ring-emerald-300/80 ring-offset-2 ring-offset-white shadow-xl shadow-emerald-500/40"
-      : "",
-  ].join(" ")}
->
-  <div className="flex items-center gap-2 mb-4">
-    <Lightbulb className="h-5 w-5 text-amber-500" />
-    <h3 className="text-lg font-semibold text-slate-900">Consejos personalizados</h3>
-  </div>
-
-  {consejos.length === 0 ? (
-    <p className="text-sm text-slate-600">
-      Cargá tus datos básicos para recibir sugerencias puntuales.
-    </p>
-  ) : (
-    <>
-      <p className="mb-2 text-xs text-slate-500">
-        Estas sugerencias se basan solo en los datos que cargaste este mes y no reemplazan asesoramiento financiero profesional.
-      </p>
-      <ul className="space-y-2 text-sm text-slate-700">
-        {consejos.map((tip, idx) => (
-          <li key={idx} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-            {tip}
-          </li>
-        ))}
-      </ul>
-    </>
-  )}
-
-
-</section>
-
-
-      {showTour ? (
-        <div className="fixed inset-0 z-30 bg-black/40 pointer-events-none" />
-      ) : null}
-
-      {showTour ? (
-        <OnboardingTour
-          steps={TOUR_STEPS}
-          currentStep={currentStep}
-          onNext={() => {
-            const next = currentStep + 1;
-            if (next > TOUR_STEPS.length) {
-              setShowTour(false);
-            } else {
-              setCurrentStep(next);
-            }
-          }}
-          onSkip={() => setShowTour(false)}
-        />
-      ) : null}
-    </div>
-  );
+function buildProjection({ includeGeneral, especifica, activeNormalized }) {
+  const labels = buildMonthLabels(12);
+  if (includeGeneral) return labels.map((month) => ({ month, ingresos: activeNormalized.ingresos, egresos: activeNormalized.egresos, resultado: activeNormalized.ingresos - activeNormalized.egresos - activeNormalized.ahorroDeseado }));
+  const projection = especifica?.projection || {};
+  const ingresos = especifica?.ingresos || {};
+  const egresos = especifica?.egresos || {};
+  const ahorroBase = toNumber(especifica?.ahorroMensual ?? especifica?.ahorro_mensual ?? especifica?.ahorroDeseado);
+  return labels.map((month, index) => {
+    const ingreso = Object.keys(ingresos).reduce((sum, key) => sum + monthValue(projection?.ingresos?.[key], index, ingresos[key]?.monto ?? ingresos[key]), 0);
+    const egreso = Object.keys(egresos).reduce((sum, key) => sum + monthValue(projection?.egresos?.[key], index, egresos[key]?.monto ?? egresos[key]), 0);
+    const ahorro = monthValue(projection?.ahorro, index, ahorroBase);
+    return { month, ingresos: ingreso || objectTotal(ingresos), egresos: egreso || objectTotal(egresos), resultado: ingreso - egreso - ahorro };
+  });
 }
 
-function OnboardingTour({ steps, currentStep, onNext, onSkip }) {
-  const step = steps.find((item) => item.id === currentStep);
-  if (!step) return null;
+function iconForExpense(name) {
+  const value = name.toLowerCase();
+  if (value.includes("alquiler") || value.includes("hipoteca")) return Home;
+  if (value.includes("super")) return ShoppingCart;
+  if (value.includes("transporte") || value.includes("vehículo")) return Car;
+  if (value.includes("salud") || value.includes("farmacia")) return HeartPulse;
+  if (value.includes("educación")) return GraduationCap;
+  if (value.includes("viaje")) return Plane;
+  if (value.includes("tarjeta")) return CreditCard;
+  if (value.includes("cuenta") || value.includes("fijo")) return ReceiptText;
+  return WalletCards;
+}
 
-  return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-4 sm:pb-6">
-      <div className="pointer-events-auto mx-auto max-w-4xl rounded-2xl border border-emerald-400/40 bg-slate-900/95 p-4 shadow-2xl sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
-              Paso {currentStep} de {steps.length}
-            </p>
-            <h4 className="mt-1 text-sm font-semibold text-white sm:text-base">
-              {step.title}
-            </h4>
-            <p className="mt-1 text-xs text-white/80 sm:text-sm">{step.body}</p>
-          </div>
-          <div className="flex gap-2 sm:items-center sm:self-center">
-            <button
-              type="button"
-              onClick={onSkip}
-              className="rounded-full border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-800 sm:text-sm"
-            >
-              Saltar
-            </button>
-            <button
-              type="button"
-              onClick={onNext}
-              className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-emerald-400 sm:text-sm"
-            >
-              {currentStep >= steps.length ? "Cerrar" : "Siguiente"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function EmptyState({ copy }) {
+  return <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 text-center"><p className="max-w-sm text-sm leading-6 text-slate-600">{copy}</p><Link href="/estimacion" className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-brand-yellow px-5 py-2.5 text-sm font-bold text-brand-navy transition-colors hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2">Estimar mi mes</Link></div>;
+}
+
+export default function HomeClient() {
+  const { general, especifica, estimables, activeMode } = useHomeData();
+  const customLabels = useCustomCategoryLabels(LS_CUSTOM_CATEGORIES);
+  const dictionaries = useMemo(() => ({ incomeLabels: { ...INCOME_LABELS, ...customLabels.ingresos }, expenseLabels: { ...EXPENSE_LABELS, ...customLabels.egresos } }), [customLabels.egresos, customLabels.ingresos]);
+  const generalNormalized = useMemo(() => normalizeGeneral(general, dictionaries), [dictionaries, general]);
+  const especificaNormalized = useMemo(() => normalizeEspecifica(especifica, dictionaries), [dictionaries, especifica]);
+  const includeGeneral = activeMode === "general";
+  const activeNormalized = includeGeneral ? generalNormalized : especificaNormalized;
+  const totals = useMemo(() => calculateTotals(activeNormalized), [activeNormalized]);
+  const hasData = hasMeaningfulData(activeNormalized);
+  const projection = useMemo(() => buildProjection({ includeGeneral, especifica, activeNormalized }), [activeNormalized, especifica, includeGeneral]);
+  const tightest = projection.reduce((lowest, month) => month.resultado < lowest.resultado ? month : lowest, projection[0]);
+  const incomeChart = activeNormalized.ingresosPorCategoria;
+  const topExpenses = [...activeNormalized.egresosPorCategoria].sort((a, b) => b.value - a.value).slice(0, 4);
+  const expenseTotal = activeNormalized.egresosPorCategoria.reduce((sum, item) => sum + item.value, 0);
+  const totalPrestamos = (estimables?.prestamos || []).reduce((sum, item) => sum + toNumber(item?.montoCuota), 0);
+  const totalTarjetas = (estimables?.tarjetas || []).reduce((sum, item) => sum + toNumber(item?.montoCuota), 0);
+  const totalCompras = (estimables?.compras || []).reduce((sum, item) => sum + toNumber(item?.valor), 0);
+  const consejos = useMemo(() => buildConsejos({ totals, activeNormalized, generalNormalized, especificaNormalized, includeGeneral, activeModeLabel: includeGeneral ? "Simple" : "Avanzado", graficoIngresos: incomeChart, graficoEgresos: activeNormalized.egresosPorCategoria, totalPrestamos, totalTarjetas, totalCompras, totalEstimables: totalPrestamos + totalTarjetas + totalCompras, tieneGeneral: hasMeaningfulData(generalNormalized), tieneEspecifica: hasMeaningfulData(especificaNormalized) }), [activeNormalized, especificaNormalized, generalNormalized, includeGeneral, incomeChart, totalCompras, totalPrestamos, totalTarjetas, totals]);
+  const cards = [
+    { label: "Ingresos estimados", value: fmtUYU(totals.ingresosTotales), detail: includeGeneral ? "Estimación simple" : "Estimación avanzada", icon: ArrowUpRight, tone: "positive" },
+    { label: "Egresos estimados", value: fmtUYU(totals.egresosTotales), detail: totals.ingresosTotales ? `${Math.round((totals.egresosTotales / totals.ingresosTotales) * 100)}% de tus ingresos` : "Sin ingresos cargados", icon: ArrowDownRight, tone: "negative" },
+    { label: "Margen disponible", value: fmtUYU(totals.capacidadMensual), detail: "Después del ahorro previsto", icon: WalletCards, tone: totals.capacidadMensual >= 0 ? "brand" : "negative" },
+    { label: "Mes más ajustado", value: hasData ? tightest.month : "Sin datos", detail: hasData ? fmtUYU(tightest.resultado) : "Completá una estimación", icon: CalendarDays, tone: "accent" },
+  ];
+
+  return <PageSurface><div className="space-y-7">
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Dashboard</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Una vista clara de tus estimaciones y de cómo podrían evolucionar durante los próximos 12 meses.</p></div><Link href="/estimacion" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-yellow px-5 py-2.5 text-sm font-bold text-brand-navy transition-colors hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2">Actualizar estimación</Link></header>
+    <StaggerGrid as="section" aria-label="Resumen financiero" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards.map((card) => <MetricCard key={card.label} {...card} />)}</StaggerGrid>
+    <Reveal><section className="grid gap-5 lg:grid-cols-3">
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2"><div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">Proyección de ingresos</h2><p className="mt-1 text-xs text-slate-500">{includeGeneral ? "Proyección constante basada en tu estimación simple." : "Usa los ajustes mensuales de tu estimación avanzada."}</p></div><span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">Próximos 12 meses</span></div>{hasData ? <div className="h-80 w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={projection} margin={{ left: 0, right: 8, top: 12, bottom: 0 }}><defs><linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.28}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0.02}/></linearGradient></defs><CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0"/><XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false}/><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} width={46}/><Tooltip formatter={(value) => [fmtUYU(value), "Ingresos"]} contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }}/><Area type="monotone" dataKey="ingresos" stroke="#2563eb" strokeWidth={3} fill="url(#incomeFill)" activeDot={{ r: 5 }}/></AreaChart></ResponsiveContainer></div> : <EmptyState copy="Completá una estimación para ver la evolución de tus ingresos."/>}</article>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div><h2 className="text-lg font-bold">Distribución de ingresos</h2><p className="mt-1 text-xs text-slate-500">De dónde proviene tu dinero estimado.</p></div>{incomeChart.length ? <><div className="mt-4 h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={incomeChart} dataKey="value" nameKey="name" innerRadius={62} outerRadius={98} paddingAngle={3}>{incomeChart.map((entry, index) => <Cell key={entry.name} fill={incomePalette[index % incomePalette.length]}/>)}</Pie><Tooltip formatter={(value, name) => [fmtUYU(value), name]} contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }}/></PieChart></ResponsiveContainer></div><div className="grid gap-2">{incomeChart.slice(0, 4).map((item, index) => <div key={item.name} className="flex items-center justify-between gap-3 text-xs"><span className="flex min-w-0 items-center gap-2 text-slate-600"><i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: incomePalette[index % incomePalette.length] }}/><span className="truncate">{item.name}</span></span><strong>{fmtUYU(item.value)}</strong></div>)}</div></> : <div className="mt-4"><EmptyState copy="Cargá un ingreso para ver cómo se distribuye."/></div>}</article>
+      {hasData ? <div className="sr-only"><table><caption>Proyección financiera de los próximos 12 meses</caption><thead><tr><th>Mes</th><th>Ingresos</th><th>Egresos</th><th>Resultado después del ahorro</th></tr></thead><tbody>{projection.map((month) => <tr key={month.month}><th>{month.month}</th><td>{fmtUYU(month.ingresos)}</td><td>{fmtUYU(month.egresos)}</td><td>{fmtUYU(month.resultado)}</td></tr>)}</tbody></table><table><caption>Distribución de ingresos</caption><thead><tr><th>Categoría</th><th>Importe</th></tr></thead><tbody>{incomeChart.map((item) => <tr key={item.name}><th>{item.name}</th><td>{fmtUYU(item.value)}</td></tr>)}</tbody></table></div> : null}
+    </section></Reveal>
+    <section><div className="mb-4"><h2 className="text-lg font-bold">Tus gastos principales</h2><p className="mt-1 text-sm text-slate-600">Las cuatro categorías que hoy tienen mayor peso.</p></div>{topExpenses.length ? <StaggerGrid className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{topExpenses.map((item) => { const Icon = iconForExpense(item.name); const percentage = expenseTotal ? Math.round((item.value / expenseTotal) * 100) : 0; return <StaggerItem key={item.name}><article className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-brand-blue"><Icon aria-hidden="true" className="h-5 w-5"/></span><span className="rounded-full bg-brand-yellow px-2.5 py-1 text-xs font-bold text-brand-navy">{percentage}%</span></div><h3 className="mt-5 truncate text-sm font-semibold text-slate-700">{item.name}</h3><p className="mt-1 text-xl font-bold tabular-nums text-brand-navy">{fmtUYU(item.value)}</p></article></StaggerItem>; })}</StaggerGrid> : <EmptyState copy="Cuando cargues tus egresos, vas a ver acá las categorías más importantes."/>}</section>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="mb-4 flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-yellow text-brand-navy"><Lightbulb aria-hidden="true" className="h-5 w-5"/></span><h2 className="text-lg font-bold">Consejos personalizados</h2></div>{consejos.length ? <><p className="mb-3 text-xs leading-5 text-slate-500">Se basan en tus estimaciones y no reemplazan asesoramiento profesional.</p><ul className="grid gap-3 md:grid-cols-2">{consejos.map((tip, index) => <li key={`${tip}-${index}`} className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{tip}</li>)}</ul></> : <EmptyState copy="Cargá tus datos para recibir sugerencias útiles según tu situación."/>}</section>
+  </div></PageSurface>;
 }
 

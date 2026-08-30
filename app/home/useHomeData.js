@@ -1,90 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  DEFAULT_ESTIMATION_MODE,
-  fetchEstimationMode,
-  fetchEstimacionEspecifica,
-  fetchEstimacionGeneral,
-  getSupabaseSession,
-} from "../../lib/app-data";
-import { supabaseBrowser } from "../../lib/supabaseBrowser";
+import { DEFAULT_ESTIMATION_MODE } from "../../lib/app-data";
 
+const LS_GENERAL = "miadmi:estimacion_general";
+const LS_ESPECIFICA = "miadmi:estimacion_especifica";
+const LS_ESTIMABLES = "miadmi:egresos_estimables";
+const MODE_KEY = "miadmi:estimacion_mode";
 const emptyEstimables = { prestamos: [], tarjetas: [], compras: [] };
 
-export function useHomeData(externalSupabase) {
-  const pathname = usePathname();
-  const supabase = useMemo(
-    () => externalSupabase ?? supabaseBrowser(),
-    [externalSupabase]
-  );
+function readJson(key, fallback = null) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
+export function useHomeData() {
+  const pathname = usePathname();
   const [general, setGeneral] = useState(null);
   const [especifica, setEspecifica] = useState(null);
   const [estimables, setEstimables] = useState(emptyEstimables);
   const [activeMode, setActiveMode] = useState(DEFAULT_ESTIMATION_MODE);
 
-  const readAll = useCallback(async () => {
-    try {
-      const { userId } = await getSupabaseSession();
-
-      if (!userId) {
-        setGeneral(null);
-        setEspecifica(null);
-        setEstimables(emptyEstimables);
-        setActiveMode(DEFAULT_ESTIMATION_MODE);
-        return;
-      }
-
-      const [g, e, mode] = await Promise.all([
-        fetchEstimacionGeneral(supabase, userId),
-        fetchEstimacionEspecifica(supabase, userId),
-        fetchEstimationMode(supabase, userId),
-      ]);
-
-
-      const resolvedMode =
-        mode === "especifica" || mode === "general" ? mode : DEFAULT_ESTIMATION_MODE;
-
-      setGeneral(g ?? null);
-      setEspecifica(e ?? null);
-      setEstimables(emptyEstimables);
-      setActiveMode(resolvedMode);
-    } catch (error) {
-      console.error("[HOME] fetch failed", error);
-      setGeneral(null);
-      setEspecifica(null);
-      setEstimables(emptyEstimables);
-      setActiveMode(DEFAULT_ESTIMATION_MODE);
-    }
-  }, [supabase]);
-
-  const handleRefresh = useCallback(() => {
-    void readAll();
-  }, [readAll]);
-
-  const handleVisibility = useCallback(() => {
-    if (document.visibilityState === "visible") {
-      handleRefresh();
-    }
-  }, [handleRefresh]);
+  const readAll = useCallback(() => {
+    if (typeof window === "undefined") return;
+    setGeneral(readJson(LS_GENERAL));
+    setEspecifica(readJson(LS_ESPECIFICA));
+    setEstimables(readJson(LS_ESTIMABLES, emptyEstimables));
+    const mode = window.localStorage.getItem(MODE_KEY);
+    setActiveMode(mode === "especifica" ? "especifica" : DEFAULT_ESTIMATION_MODE);
+  }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    handleRefresh();
-
-    window.addEventListener("focus", handleRefresh);
-    window.addEventListener("miadmi:data-updated", handleRefresh);
-    document.addEventListener("visibilitychange", handleVisibility);
-
+    readAll();
+    const onVisibility = () => document.visibilityState === "visible" && readAll();
+    window.addEventListener("focus", readAll);
+    window.addEventListener("miadmi:data-updated", readAll);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      window.removeEventListener("focus", handleRefresh);
-      window.removeEventListener("miadmi:data-updated", handleRefresh);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", readAll);
+      window.removeEventListener("miadmi:data-updated", readAll);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [handleRefresh, handleVisibility, pathname]);
+  }, [readAll, pathname]);
 
   return { general, especifica, estimables, activeMode };
 }

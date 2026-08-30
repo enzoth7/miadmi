@@ -1,8 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar } from "lucide-react";
-import { useSessionInfo } from "../../../components/SessionProvider";
+import { Calendar, CreditCard, Landmark, ReceiptText } from "lucide-react";
 import {
   getSupabaseSession,
   fetchEstimablesGrouped,
@@ -13,9 +12,9 @@ import {
   getCurrentMonthKey,
   normalizeMonthKey,
 } from "../../../lib/installments";
-import { EgresosEstimablesOnboardingTour } from "../../../components/onboarding/EgresosEstimablesOnboardingTour";
+import { MetricCard, PageSurface, StaggerGrid } from "../../../components/financial/FinancialPrimitives";
 
-const LS_KEY = (userId) => `miadmi:${userId}:egresos_estimables`;
+const LS_KEY = () => "miadmi:egresos_estimables";
 
 const n = (value) => {
   const normalized = String(value ?? "").replace(",", ".").trim();
@@ -62,13 +61,11 @@ const asCompra = (item) => ({
   mes: String(item?.mes ?? ""),
 });
 
-const MAX_FREE_ESTIMABLES = 5;
-
 const inputBaseClasses =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0 md:px-3 md:py-2 md:text-sm";
+  "min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-blue-100";
 const inputRightClasses = `${inputBaseClasses} text-right font-semibold [font-variant-numeric:tabular-nums]`;
 const disabledInputClasses =
-  "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-right text-base font-semibold text-slate-600 cursor-not-allowed md:px-3 md:py-2 md:text-sm";
+  "flex min-h-11 w-full cursor-not-allowed items-center justify-end rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-right text-base font-semibold text-gray-600 md:text-sm";
 
 
 const SUSCRIPTION_VIRTUAL_INSTALLMENTS = 120;
@@ -142,6 +139,18 @@ const getTotalInstallmentsFromRange = (startKey, endKey) => {
   return diff > 0 ? diff : null;
 };
 
+const applyStartMonth = (list, currentMonthKey) =>
+  list.map((item) => ({
+    ...item,
+    mesInicio: normalizeMonthKey(item?.mesInicio, currentMonthKey) ?? currentMonthKey,
+  }));
+
+const buildPersistableSnapshot = (prestamos, tarjetas, compras) => ({
+  prestamos: prestamos.map((item) => ({ ...item })),
+  tarjetas: tarjetas.map((item) => ({ ...item })),
+  compras: compras.map((item) => ({ ...item })),
+});
+
 
 
 export default function EgresosEstimablesPage() {
@@ -154,27 +163,9 @@ export default function EgresosEstimablesPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
-  const [limitNotice, setLimitNotice] = useState("");
-  const [showTour, setShowTour] = useState(false);
-  const { plan, premiumUntil } = useSessionInfo();
-  const isPremium =
-    plan === "premium" &&
-    (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
 
   const hydratingRef = useRef(false);
-  const currentMonthKey = getCurrentMonthKey();
-  const ensureStartMonth = (value) =>
-    normalizeMonthKey(value, currentMonthKey) ?? currentMonthKey;
-  const applyStartMonth = (list) =>
-    list.map((item) => ({
-      ...item,
-      mesInicio: ensureStartMonth(item?.mesInicio),
-    }));
-  const buildPersistableSnapshot = () => ({
-    prestamos: prestamos.map((item) => ({ ...item })),
-    tarjetas: tarjetas.map((item) => ({ ...item })),
-    compras: compras.map((item) => ({ ...item })),
-  });
+  const currentMonthKey = useMemo(() => getCurrentMonthKey(), []);
 
 const autoGrow = (e) => {
   const el = e.currentTarget;
@@ -203,10 +194,10 @@ const autoGrow = (e) => {
             if (remote && active) {
               const snapshot = {
                 prestamos: Array.isArray(remote.prestamos)
-                  ? applyStartMonth(remote.prestamos.map(asPrestamo))
+                  ? applyStartMonth(remote.prestamos.map(asPrestamo), currentMonthKey)
                   : [],
                 tarjetas: Array.isArray(remote.tarjetas)
-                  ? applyStartMonth(remote.tarjetas.map(asTarjeta))
+                  ? applyStartMonth(remote.tarjetas.map(asTarjeta), currentMonthKey)
                   : [],
                 compras: Array.isArray(remote.compras)
                   ? remote.compras.map(asCompra)
@@ -229,20 +220,18 @@ localStorage.setItem(LS_KEY(ctx.userId), JSON.stringify(snapshot));
 
         if (!synced) {
           try {
-if (!ctx.userId) return;
-
 const raw = localStorage.getItem(LS_KEY(ctx.userId));
             if (raw) {
               const cached = JSON.parse(raw);
               if (cached && active) {
                 setPrestamos(
                   Array.isArray(cached.prestamos)
-                    ? applyStartMonth(cached.prestamos.map(asPrestamo))
+                    ? applyStartMonth(cached.prestamos.map(asPrestamo), currentMonthKey)
                     : []
                 );
                 setTarjetas(
                   Array.isArray(cached.tarjetas)
-                    ? applyStartMonth(cached.tarjetas.map(asTarjeta))
+                    ? applyStartMonth(cached.tarjetas.map(asTarjeta), currentMonthKey)
                     : []
                 );
                 setCompras(
@@ -271,12 +260,12 @@ const raw = localStorage.getItem(LS_KEY(ctx.userId));
       active = false;
       hydratingRef.current = false;
     };
-  }, []);
+  }, [currentMonthKey]);
 
 useEffect(() => {
-  if (!loaded || !session.userId) return;
+  if (!loaded) return;
 
-  const snapshot = buildPersistableSnapshot();
+  const snapshot = buildPersistableSnapshot(prestamos, tarjetas, compras);
   try {
     localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
   } catch {
@@ -298,44 +287,20 @@ useEffect(() => {
     return () => clearTimeout(timer);
   }, [saveSuccess]);
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const key = "miadmi:tour-egresos-estimables";
-
-  try {
-    const stored = window.localStorage.getItem(key);
-
-    if (!stored) {
-      // primera vez que entra
-      window.localStorage.setItem(key, "pending");
-    }
-
-    if (window.localStorage.getItem(key) === "pending") {
-      setShowTour(true);
-      window.localStorage.setItem(key, "done");
-    }
-  } catch {
-    // ignore storage errors
-  }
-}, []);
-
 
   const handleSave = async () => {
-    if (!session.userId || !session.supabase) {
-      setSaveError("Necesitas iniciar sesion para guardar.");
-      return;
-    }
     setSaving(true);
     setSaveError("");
     setSaveSuccess("");
-    const snapshot = buildPersistableSnapshot();
+    const snapshot = buildPersistableSnapshot(prestamos, tarjetas, compras);
     try {
-      await replaceEstimables(session.supabase, session.userId, snapshot);
       try {
 localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
       } catch {
         // ignore storage errors
+      }
+      if (session.supabase && session.userId) {
+        await replaceEstimables(session.supabase, session.userId, snapshot);
       }
       setDirty(false);
       setSaveSuccess("Cambios guardados.");
@@ -352,7 +317,7 @@ localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
     }
   };
 
-  const canSave = dirty && !saving && !!session.userId;
+  const canSave = dirty && !saving;
 
   const prestamosSchedule = useMemo(
     () =>
@@ -386,41 +351,9 @@ localStorage.setItem(LS_KEY(session.userId), JSON.stringify(snapshot));
     [compras, currentMonthKey]
   );
 
-  const totalMovimientos = prestamos.length + tarjetas.length + compras.length;
-  const reachedFreeLimit = !isPremium && totalMovimientos >= MAX_FREE_ESTIMABLES;
-
-  useEffect(() => {
-    if (!reachedFreeLimit) setLimitNotice("");
-  }, [reachedFreeLimit]);
-
-  const openPremiumBlock = (reason = "general") => {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent("miadmi:premium-block", { detail: { reason } })
-  );
-};
-
-
-const ensureCanAdd = (reason = "estimables") => {
-  if (reachedFreeLimit) {
-    // si querés, podés borrar el limitNotice y dejar solo el modal
-    setLimitNotice(
-      `El plan gratuito permite hasta ${MAX_FREE_ESTIMABLES} movimientos estimables. Mejora a premium para seguir agregando.`
-    );
-    openPremiumBlock(reason);
-    return false;
-  }
-  return true;
-};
-
-
-
-
-
   const totalMensual = totalPrestamos + totalTarjetas;
 
 const addPrestamo = () => {
-  if (!ensureCanAdd("estimables")) return;
     setPrestamos((prev) => [
       ...prev,
       {
@@ -448,7 +381,6 @@ const addPrestamo = () => {
   };
 
 const addTarjeta = () => {
-  if (!ensureCanAdd("estimables")) return;
     setTarjetas((prev) => [
       ...prev,
       {
@@ -527,7 +459,6 @@ const addTarjeta = () => {
   };
 
 const addCompra = () => {
-  if (!ensureCanAdd("estimables")) return;
     setCompras((prev) => [
       ...prev,
       { id: rid(), nombre: "", valor: "", mes: "" },
@@ -548,61 +479,37 @@ const addCompra = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-white md:text-3xl">
+    <PageSurface>
+    <div className="space-y-8">
+      <header className="space-y-3">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">
           Egresos estimables
         </h1>
-        <p className="text-white/80">
+        <p className="max-w-3xl text-sm text-gray-600">
           Préstamos, tarjetas y compras planificadas para tu proyección mensual.
         </p>
       </header>
 
-      <section
-        id="egresos-kpis"
-        className="rounded-2xl border border-sky-100 bg-white/90 p-5 text-slate-900 shadow-sm"
-      >
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sky-900 shadow-sm">
-            <span className="text-xs uppercase tracking-wide text-sky-600">
-              Total préstamos
-            </span>
-            <div className="text-2xl font-semibold">{fmtUYU(totalPrestamos)}</div>
-          </div>
-          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sky-900 shadow-sm">
-            <span className="text-xs uppercase tracking-wide text-sky-600">
-              Total tarjetas
-            </span>
-            <div className="text-2xl font-semibold">{fmtUYU(totalTarjetas)}</div>
-          </div>
-          <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sky-900 shadow-sm">
-            <span className="text-xs uppercase tracking-wide text-sky-600">
-              Total egresos en crédito por mes
-            </span>
-            <div className="text-2xl font-semibold">{fmtUYU(totalMensual)}</div>
-          </div>
-        </div>
-        {limitNotice ? (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-            {limitNotice}
-          </div>
-        ) : null}
-      </section>
+      <StaggerGrid id="egresos-kpis" as="section" className="grid gap-3 md:grid-cols-3">
+        <MetricCard label="Total préstamos" value={fmtUYU(totalPrestamos)} icon={Landmark} />
+        <MetricCard label="Total tarjetas" value={fmtUYU(totalTarjetas)} icon={CreditCard} />
+        <MetricCard label="Total egresos en crédito por mes" value={fmtUYU(totalMensual)} icon={ReceiptText} tone="accent" />
+      </StaggerGrid>
 
       {/* Préstamos */}
       <section
         id="egresos-prestamos-card"
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow"
+        className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold md:text-xl">Préstamos</h2>
-          <p className="text-sm text-slate-600">
-            Ingresa los préstamos vigentes y cuánto pagas cada mes.
+          <h2 className="text-lg font-bold text-[#0b1e3a] md:text-xl">Préstamos</h2>
+          <p className="text-sm text-gray-600">
+            Ingresá los préstamos vigentes y cuánto pagás cada mes.
           </p>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="min-w-full table-fixed text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-gray-100 text-gray-600">
               <tr>
                 <th className="px-3 py-2 text-left">Nombre</th>
                 <th className="px-3 py-2 text-left">Mes inicio</th>
@@ -614,7 +521,7 @@ const addCompra = () => {
             </thead>
             <tbody className="divide-y">
               {prestamos.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/80">
+                <tr key={item.id} className="hover:bg-blue-50/40">
                   <td className="px-3 py-2">
                     <input
                       className={inputBaseClasses}
@@ -661,36 +568,25 @@ const addCompra = () => {
                     <button
                       type="button"
                       onClick={() => remPrestamo(item.id)}
-                      className="text-sm font-semibold text-rose-600 transition hover:text-rose-700"
+                      className="inline-flex min-h-11 items-center text-sm font-semibold text-rose-600 transition hover:text-rose-700"
                     >
                       Eliminar
                     </button>
                   </td>
                 </tr>
               ))}
-              <tr className="bg-slate-50/80">
+              <tr className="bg-gray-50">
                 <td className="px-3 py-2">
 <button
   type="button"
-  onClick={() => {
-    if (reachedFreeLimit) {
-      openPremiumBlock("estimables");
-      return;
-    }
-    addPrestamo();
-  }}
-  className={[
-    "inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50",
-    reachedFreeLimit
-      ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15"
-      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-  ].join(" ")}
+  onClick={addPrestamo}
+  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition-colors hover:border-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
 >
   Agregar préstamo
 </button>
 
                 </td>
-                <td className="px-3 py-2" colSpan={4}></td>
+                <td className="px-3 py-2" colSpan={5}></td>
               </tr>
             </tbody>
           </table>
@@ -698,30 +594,18 @@ const addCompra = () => {
       </section>
 
    {/* Tarjetas */}
-<section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow">
+<section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
   <div className="flex flex-col gap-1">
-    <h2 className="text-lg font-semibold md:text-xl">Tarjetas</h2>
-    <p className="text-sm text-slate-600">
-      Ingresa todas las compras hechas con tus tarjetas de crédito, incluidas las suscripciones.
+    <h2 className="text-lg font-bold text-[#0b1e3a] md:text-xl">Tarjetas</h2>
+    <p className="text-sm text-gray-600">
+      Ingresá todas las compras hechas con tus tarjetas de crédito, incluidas las suscripciones.
     </p>
   </div>
 
-  <div className="w-full overflow-x-auto md:overflow-x-hidden rounded-xl border border-slate-100">
+  <div className="w-full overflow-x-auto rounded-xl border border-gray-200">
     <table className="w-full table-auto text-sm">
-<colgroup>
-  <col className="w-[30%] md:w-[28%]" /> {/* Nombre */}
-  <col className="w-[12%] md:w-[14%]" /> {/* Inicio */}
-  <col className="w-[12%] md:w-[14%]" /> {/* Fin */}
-  <col className="w-[6%] md:w-[8%]" />   {/* Cuotas */}
-  <col className="w-[14%] md:w-[10%]" /> {/* Total */}
-  <col className="w-[10%] md:w-[10%]" /> {/* Cuota */}
-  <col className="w-[14%] md:w-[14%]" /> {/* Tipo */}
-  <col className="w-[2%] md:w-[2%]" />   {/* Eliminar */}
-</colgroup>
-</table>
-
-
-<thead className="bg-slate-50 text-slate-600">
+<colgroup><col className="w-[30%] md:w-[28%]" /><col className="w-[12%] md:w-[14%]" /><col className="w-[12%] md:w-[14%]" /><col className="w-[6%] md:w-[8%]" /><col className="w-[14%] md:w-[10%]" /><col className="w-[10%] md:w-[10%]" /><col className="w-[14%] md:w-[14%]" /><col className="w-[2%] md:w-[2%]" /></colgroup>
+<thead className="bg-gray-100 text-gray-600">
         <tr>
          <th className="px-1 md:px-2 py-2 text-left">Nombre</th>
 <th className="px-1 md:px-2 py-2 text-left">Inicio</th>
@@ -737,7 +621,7 @@ const addCompra = () => {
 
       <tbody className="divide-y">
         {tarjetas.map((item) => (
-          <tr key={item.id} className="hover:bg-slate-50/80">
+          <tr key={item.id} className="hover:bg-blue-50/40">
 <td className="px-1 md:px-2 py-2 align-top">
 <textarea
   className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1 leading-snug resize-none`}
@@ -809,7 +693,7 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
               <button
                 type="button"
                 onClick={() => remTarjeta(item.id)}
-                className="text-sm font-semibold text-rose-600 transition hover:text-rose-700"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-rose-600 transition hover:text-rose-700"
               >
                 Eliminar
               </button>
@@ -817,23 +701,12 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
           </tr>
         ))}
 
-        <tr className="bg-slate-50/80">
+        <tr className="bg-gray-50">
 <td className="px-1 md:px-2 py-2 align-top">
 <button
   type="button"
-  onClick={() => {
-    if (reachedFreeLimit) {
-      openPremiumBlock("estimables");
-      return;
-    }
-    addTarjeta();
-  }}
-  className={[
-    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold",
-    reachedFreeLimit
-      ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-  ].join(" ")}
+  onClick={addTarjeta}
+  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition-colors hover:border-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
 >
   Agregar tarjeta
 </button>
@@ -842,8 +715,8 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
           <td className="px-1 md:px-2 py-2" colSpan={7}></td>
         </tr>
       </tbody>
-
-    <p className="px-1 md:px-2 pb-2 text-xs text-slate-500">
+    </table>
+    <p className="px-2 pb-2 pt-2 text-xs text-gray-500">
       El monto de la cuota se calcula automáticamente a partir del total y las cuotas seleccionadas.
     </p>
   </div>
@@ -854,19 +727,19 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
       {/* Compras planificadas */}
       <section
         id="egresos-compras-card"
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow"
+        className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold md:text-xl">
+          <h2 className="text-lg font-bold text-[#0b1e3a] md:text-xl">
             Compras planificadas
           </h2>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-gray-600">
             Cuando cargues un valor aquí se pagará en efectivo el mes elegido y se reflejará en Estimación específica.
           </p>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="min-w-full table-fixed text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-gray-100 text-gray-600">
               <tr>
                 <th className="px-3 py-2 text-left">Nombre</th>
                 <th className="px-3 py-2 text-left">Mes objetivo</th>
@@ -876,7 +749,7 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
             </thead>
             <tbody className="divide-y">
               {compras.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/80">
+                <tr key={item.id} className="hover:bg-blue-50/40">
                   <td className="px-3 py-2">
                     <input
                       className={inputBaseClasses}
@@ -908,28 +781,19 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
                     <button
                       type="button"
                       onClick={() => remCompra(item.id)}
-                      className="text-sm font-semibold text-rose-600 transition hover:text-rose-700"
+                      className="inline-flex min-h-11 items-center text-sm font-semibold text-rose-600 transition hover:text-rose-700"
                     >
                       Eliminar
                     </button>
                   </td>
                 </tr>
               ))}
-              <tr className="bg-slate-50/80">
+              <tr className="bg-gray-50">
                 <td className="px-3 py-2">
 <button
   type="button"
-  onClick={() => {
-    if (reachedFreeLimit) {
-      openPremiumBlock("estimables");
-      return;
-    }
-    addCompra();
-  }}
-  className={[
-    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold",
-    "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-  ].join(" ")}
+  onClick={addCompra}
+  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition-colors hover:border-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
 >
   Agregar compra
 </button>
@@ -939,18 +803,16 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
               </tr>
             </tbody>
           </table>
-          <p className="px-3 pb-2 text-xs text-slate-500">
+          <p className="px-3 pb-2 text-xs text-gray-500">
             Estas compras se suman automáticamente como egreso único en el mes seleccionado de tu Estimación específica.
           </p>
         </div>
       </section>
 
-      <div className="sticky bottom-0 left-0 right-0 mt-6 flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-slate-600">
-          {!session.userId
-            ? "Inicia sesión para guardar tus cambios en la nube."
-            : dirty
-            ? "Tienes cambios sin guardar."
+      <div className="sticky bottom-2 left-0 right-0 mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-gray-600">
+          {dirty
+            ? "Tenés cambios sin guardar."
             : saveSuccess
             ? saveSuccess
             : "Últimos cambios guardados."}
@@ -961,20 +823,18 @@ className={`${inputBaseClasses} w-full min-w-0 py-3 md:py-1`}
           onClick={handleSave}
           disabled={!canSave}
           className={[
-            "inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+            "inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2 text-sm font-bold transition-colors",
             canSave
-              ? "bg-emerald-500 text-white hover:bg-emerald-600"
-              : "bg-slate-300 text-slate-600 cursor-not-allowed",
+              ? "bg-brand-yellow text-brand-navy hover:bg-yellow-300"
+              : "cursor-not-allowed bg-gray-200 text-gray-500",
           ].join(" ")}
         >
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
 
-      {showTour ? (
-        <EgresosEstimablesOnboardingTour onClose={() => setShowTour(false)} />
-      ) : null}
     </div>
+    </PageSurface>
   );
 }
 
@@ -1008,12 +868,12 @@ function MonthField({ value, onChange }) {
     <button
       type="button"
       onClick={openPicker}
-      className="w-full text-left"
+      className="min-h-11 w-full cursor-pointer rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
       aria-label="Seleccionar mes"
     >
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <Calendar className="h-4 w-4 text-slate-400" />
-        <span className="text-sm text-slate-900 tabular-nums">
+      <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 transition-colors hover:border-brand-blue">
+        <Calendar className="h-4 w-4 text-gray-500" />
+        <span className="text-sm font-medium text-[#0b1e3a] tabular-nums">
           {label || "MM/AAAA"}
         </span>
       </div>
@@ -1029,6 +889,3 @@ function MonthField({ value, onChange }) {
     </button>
   );
 }
-
-
-

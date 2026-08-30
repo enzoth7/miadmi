@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HerramientasOnboardingTour } from "../../components/onboarding/HerramientasOnboardingTour";
+import { BriefcaseBusiness, Calculator, Gift, ShieldCheck } from "lucide-react";
+import { PageSurface, StaggerGrid, StaggerItem } from "../../components/financial/FinancialPrimitives";
 
 const tools = [
    {
@@ -11,6 +11,7 @@ const tools = [
     description:
       "Calculá rápidamente tu salario proyectado y comparalo contra lo que esperás cobrar.",
     href: "/herramientas/calcular-descuentos-salarios",
+    icon: Calculator,
   },
   {
     id: "aguinaldo",
@@ -18,6 +19,7 @@ const tools = [
     description:
       "Calculá rápidamente tu aguinaldo proyectado y comparalo contra lo que esperás cobrar.",
     href: "/herramientas/aguinaldo",
+    icon: Gift,
   },
   {
     id: "despidoyrenuncia",
@@ -25,6 +27,7 @@ const tools = [
     description:
       "Simulá cuánto te corresponde en caso de despido o renuncia según antigüedad y condiciones laborales.",
     href: "/herramientas/despido-renuncia",
+    icon: BriefcaseBusiness,
   },
   {
     id: "seguro",
@@ -32,75 +35,43 @@ const tools = [
     description:
       "Conocé qué monto podrías recibir por seguro de desempleo y los requisitos vigentes.",
     href: "/herramientas/seguro-desempleo",
-  },
-  {
-    id: "inversiones",
-    title: "Herramienta de inversiones",
-    description:
-      "Proyectá rendimientos potenciales y analizá escenarios de inversión a tu medida.",
-    href: "/herramientas/inversiones",
+    icon: ShieldCheck,
   },
 ];
 
 export default function HerramientasPage() {
-  const [showTour, setShowTour] = useState(false);
-
-useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const key = "miadmi:tour-herramientas";
-
-  try {
-    const stored = window.localStorage.getItem(key);
-
-    if (!stored) {
-      // primera vez que entra a Herramientas
-      window.localStorage.setItem(key, "pending");
-    }
-
-    if (window.localStorage.getItem(key) === "pending") {
-      setShowTour(true);
-      window.localStorage.setItem(key, "done");
-    }
-  } catch {
-    // ignore storage issues
-  }
-}, []);
-
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white">Herramientas Gratuitas</h1>
-        <p className="text-base text-gray-300">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">Herramientas Gratuitas</h1>
+        <p className="max-w-3xl text-base text-slate-600">
           Calculadoras y simuladores financieros adaptados a la normativa vigente en Uruguay.
         </p>
       </header>
 
-      <section id="herramientas-grid" className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <StaggerGrid as="section" id="herramientas-grid" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {tools.map((tool) => (
-          <div
-            key={tool.id}
-            className="group flex h-full flex-col justify-between rounded-3xl bg-white p-7 text-[#0b1e3a] shadow-xl border border-gray-100 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
-          >
+          <StaggerItem key={tool.id} interactive className="h-full">
+          <article className="group flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 text-brand-navy shadow-sm transition-shadow hover:shadow-md">
             <div className="space-y-3">
-              <h3 className="text-xl font-bold text-[#0b1e3a]">{tool.title}</h3>
-              <p className="text-sm leading-relaxed text-gray-600">{tool.description}</p>
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-brand-blue"><tool.icon aria-hidden="true" className="h-5 w-5" /></span>
+              <h2 className="text-xl font-bold text-brand-navy">{tool.title}</h2>
+              <p className="text-sm leading-relaxed text-slate-600">{tool.description}</p>
             </div>
-            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="mt-6 flex flex-col items-stretch gap-3 border-t border-gray-100 pt-4">
               <Link
                 href={tool.href}
-                className="inline-flex items-center justify-center rounded-xl bg-[#FACC15] px-5 py-2.5 text-xs sm:text-sm font-bold text-[#0b1e3a] hover:bg-yellow-400 transition-all shadow-sm"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-yellow px-4 py-2.5 text-sm font-bold text-brand-navy transition-colors hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
               >
                 Abrir calculadora
               </Link>
-              <span className="text-xs font-semibold text-gray-400">Uruguay 🇺🇾</span>
             </div>
-          </div>
+          </article>
+          </StaggerItem>
         ))}
-      </section>
-      {showTour ? (
-        <HerramientasOnboardingTour onClose={() => setShowTour(false)} />
-      ) : null}
+      </StaggerGrid>
     </div>
+    </PageSurface>
   );
 }

@@ -1,129 +1,111 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
-import { supabaseBrowser } from "../lib/supabaseBrowser";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "../lib/supabase/client";
+import {
+  ensureGuestSpace,
+  reconcileUserSpace,
+  restoreSpace,
+  saveActiveSpace,
+  syncChangedUserData,
+} from "../lib/hybrid-storage";
 
-const SessionContext = createContext({
-  user: null,
-  plan: "free",
-  premiumUntil: null,
-  loading: true,
-  refresh: async () => {},
-});
+const SessionContext = createContext(null);
 
 export function SessionProvider({ children }) {
-  const supabase = supabaseBrowser();
-
+  const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
-  const [plan, setPlan] = useState("free");
-  const [premiumUntil, setPremiumUntil] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const syncTimer = useRef(null);
+  const currentUserId = useRef(null);
+  const supabase = useMemo(() => createClient(), []);
 
-  const fetchSessionAndPlan = useCallback(async () => {
-    try {
-      setLoading(true);
+  const enterGuest = useCallback(() => {
+    if (currentUserId.current) saveActiveSpace(`user:${currentUserId.current}`);
+    ensureGuestSpace();
+    restoreSpace("guest");
+    currentUserId.current = null;
+    setUser(null);
+    setStatus("guest");
+  }, []);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const u = session?.user ?? null;
-      setUser(u);
-
-   if (u) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("plan,premium_until")
-    .eq("id", u.id)
-    .single();
-
-  if (!error && data) {
-    const until = data.premium_until ? new Date(data.premium_until) : null;
-    const stillPremium =
-      data.plan === "premium" &&
-      until &&
-      until.getTime() > Date.now();
-
-    setPlan(stillPremium ? "premium" : "free");
-    setPremiumUntil(data.premium_until ?? null);
-  } else {
-    setPlan("free");
-    setPremiumUntil(null);
-  }
-} else {
-  setPlan("free");
-  setPremiumUntil(null);
-}
-
-    } finally {
-      setLoading(false);
+  const enterUser = useCallback(async (nextUser) => {
+    if (!currentUserId.current) {
+      ensureGuestSpace();
+      saveActiveSpace("guest");
     }
+    await reconcileUserSpace(supabase, nextUser.id);
+    currentUserId.current = nextUser.id;
+    setUser(nextUser);
+    setStatus("authenticated");
   }, [supabase]);
 
-  const refreshOnReturn = useCallback(async () => {
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        await supabase.auth.refreshSession();
-      }
-    } catch {
-      // noop
-    } finally {
-      fetchSessionAndPlan();
-    }
-  }, [supabase, fetchSessionAndPlan]);
-
-const ensureProfile = useCallback(async () => {
-  try {
-    const res = await fetch("/api/profile/ensure", { method: "POST" });
-    await res.text().catch(() => {});
-  } catch {
-    // noop
-  }
-}, []);
-
-
-
-
-
   useEffect(() => {
-    fetchSessionAndPlan();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "SIGNED_IN") {
-        await ensureProfile();
+    let active = true;
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!active) return;
+      try {
+        if (data.user) await enterUser(data.user);
+        else enterGuest();
+      } catch {
+        if (active) enterGuest();
       }
-      fetchSessionAndPlan();
     });
 
-
-    // ✅ mobile: cuando volvés a la app, refrescá tokens
-    const onFocus = () => refreshOnReturn();
-    const onVis = () => {
-      if (!document.hidden) refreshOnReturn();
-    };
-
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVis);
-
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active || event === "INITIAL_SESSION") return;
+      window.setTimeout(async () => {
+        if (session?.user) await enterUser(session.user);
+        else enterGuest();
+      }, 0);
+    });
     return () => {
-      sub?.subscription?.unsubscribe?.();
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVis);
+      active = false;
+      listener.subscription.unsubscribe();
     };
-  }, [supabase, fetchSessionAndPlan, refreshOnReturn, ensureProfile]);
+  }, [enterGuest, enterUser, supabase]);
 
-  const value = useMemo(
-    () => ({
-      user,
-      plan,
-      premiumUntil,
-      loading,
-      refresh: fetchSessionAndPlan,
-    }),
-    [user, plan, premiumUntil, loading, fetchSessionAndPlan]
+  useEffect(() => {
+    const sync = () => {
+      if (!currentUserId.current || !navigator.onLine) return;
+      if (syncTimer.current) window.clearTimeout(syncTimer.current);
+      syncTimer.current = window.setTimeout(() => {
+        syncChangedUserData(supabase, currentUserId.current).catch(() => {});
+      }, 350);
+    };
+    const onVisibility = () => document.visibilityState === "visible" && sync();
+    window.addEventListener("miadmi:data-updated", sync);
+    window.addEventListener("online", sync);
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("miadmi:data-updated", sync);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (syncTimer.current) window.clearTimeout(syncTimer.current);
+    };
+  }, [supabase]);
+
+  const signOut = useCallback(async () => {
+    if (currentUserId.current) saveActiveSpace(`user:${currentUserId.current}`);
+    await supabase.auth.signOut();
+    enterGuest();
+  }, [enterGuest, supabase]);
+
+  const value = useMemo(() => ({ status, user, signOut, supabase }), [signOut, status, supabase, user]);
+  return (
+    <SessionContext.Provider value={value}>
+      {status === "loading" ? (
+        <div className="flex min-h-dvh items-center justify-center bg-[#0b1e3a] text-sm text-white/70" role="status">
+          Cargando Mi Admi…
+        </div>
+      ) : children}
+    </SessionContext.Provider>
   );
-
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
-export function useSessionInfo() {
-  return useContext(SessionContext);
+export function useSession() {
+  const value = useContext(SessionContext);
+  if (!value) throw new Error("useSession debe usarse dentro de SessionProvider");
+  return value;
 }

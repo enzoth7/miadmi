@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { PageSurface, ResultPanel } from '../../components/financial/FinancialPrimitives';
 
 
 const TOTAL_STEPS = 5;
@@ -48,7 +50,14 @@ const toNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const inputClassName =
+  'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-blue-100';
+
+const optionClassName =
+  'flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-blue-300 hover:bg-blue-50/60 has-[:checked]:border-brand-blue has-[:checked]:bg-blue-50';
+
 export default function EstimaTuMesClient() {
+  const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(1);
   const [income, setIncome] = useState('');
   const [housingChoice, setHousingChoice] = useState('');
@@ -73,15 +82,15 @@ export default function EstimaTuMesClient() {
 const stepRef = useRef<HTMLDivElement | null>(null);
 
 useEffect(() => {
-  stepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}, [step]);
+  stepRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}, [reduceMotion, step]);
 
 const saldoColor =
   saldoEstimado > 5000
     ? 'text-emerald-300'
     : saldoEstimado >= 0
-    ? 'text-amber-300'
-    : 'text-rose-400';
+    ? 'text-blue-200'
+    : 'text-rose-300';
   
 
 const saldoMensaje =
@@ -161,7 +170,7 @@ const renderStepByIndex = (currentStep: number) => {
       case 1:
         return (
           <div className='space-y-3'>
-            <label htmlFor='income' className='text-sm font-medium text-white'>
+            <label htmlFor='income' className='text-sm font-bold text-gray-700'>
               Sueldo mensual en mano
             </label>
             <input
@@ -178,10 +187,10 @@ const renderStepByIndex = (currentStep: number) => {
               }}
               aria-invalid={Boolean(errors.income)}
               aria-describedby={errors.income ? 'income-error' : undefined}
-              className='w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30'
+              className={inputClassName}
             />
             {errors.income ? (
-              <p id='income-error' role='alert' className='text-xs text-rose-200'>
+              <p id='income-error' role='alert' className='text-xs font-medium text-red-600'>
                 {errors.income}
               </p>
             ) : null}
@@ -194,11 +203,11 @@ const renderStepByIndex = (currentStep: number) => {
               className='space-y-3'
               aria-describedby={errors.housingChoice ? 'housing-choice-error' : undefined}
             >
-              <legend className='text-sm font-medium text-white'>
-                {'¿Pagas alquiler?'}
+              <legend className='text-sm font-bold text-gray-700'>
+                {'¿Pagás alquiler?'}
               </legend>
               <div className='grid gap-3 sm:grid-cols-2'>
-                <label className='flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:border-white/30'>
+                <label className={optionClassName}>
                   <input
                     type='radio'
                     name='housing'
@@ -209,11 +218,11 @@ const renderStepByIndex = (currentStep: number) => {
                       setHousingAmount('');
                       setErrors({});
                     }}
-                    className='h-4 w-4 accent-emerald-400'
+                    className='mt-0.5 h-4 w-4 accent-[#0b1e3a]'
                   />
-                  <span className='text-sm text-white'>No</span>
+                  <span className='text-sm text-[#0b1e3a]'>No</span>
                 </label>
-                <label className='flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:border-white/30'>
+                <label className={optionClassName}>
                   <input
                     type='radio'
                     name='housing'
@@ -223,13 +232,13 @@ const renderStepByIndex = (currentStep: number) => {
                       setHousingChoice('si');
                       setErrors({});
                     }}
-                    className='h-4 w-4 accent-emerald-400'
+                    className='mt-0.5 h-4 w-4 accent-[#0b1e3a]'
                   />
-                  <span className='text-sm text-white'>{'S\u00ed'}</span>
+                  <span className='text-sm text-[#0b1e3a]'>{'S\u00ed'}</span>
                 </label>
               </div>
               {errors.housingChoice ? (
-                <p id='housing-choice-error' role='alert' className='text-xs text-rose-200'>
+                <p id='housing-choice-error' role='alert' className='text-xs font-medium text-red-600'>
                   {errors.housingChoice}
                 </p>
               ) : null}
@@ -237,7 +246,7 @@ const renderStepByIndex = (currentStep: number) => {
 
             {housingChoice === 'si' ? (
               <div className='space-y-3'>
-                <label htmlFor='housingAmount' className='text-sm font-medium text-white'>
+                <label htmlFor='housingAmount' className='text-sm font-bold text-gray-700'>
                   Monto mensual (UYU)
                 </label>
                 <input
@@ -254,10 +263,10 @@ const renderStepByIndex = (currentStep: number) => {
                   }}
                   aria-invalid={Boolean(errors.housingAmount)}
                   aria-describedby={errors.housingAmount ? 'housing-amount-error' : undefined}
-                  className='w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30'
+                  className={inputClassName}
                 />
                 {errors.housingAmount ? (
-                  <p id='housing-amount-error' role='alert' className='text-xs text-rose-200'>
+                  <p id='housing-amount-error' role='alert' className='text-xs font-medium text-red-600'>
                     {errors.housingAmount}
                   </p>
                 ) : null}
@@ -271,14 +280,14 @@ const renderStepByIndex = (currentStep: number) => {
             className='space-y-3'
             aria-describedby={errors.services ? 'services-error' : undefined}
           >
-            <legend className='text-sm font-medium text-white'>
-              {'¿Cuanto se te van en servicios? (OSE, UTE, ANTEL)'}
+            <legend className='text-sm font-bold text-gray-700'>
+              {'¿Cuánto se te va en servicios? (OSE, UTE, ANTEL)'}
             </legend>
             <div className='space-y-3'>
               {SERVICE_OPTIONS.map((option) => (
                 <label
                   key={option.value}
-                  className='flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:border-white/30'
+                  className={optionClassName}
                 >
                   <input
                     type='radio'
@@ -289,14 +298,14 @@ const renderStepByIndex = (currentStep: number) => {
                       setServices(event.target.value);
                       setErrors({});
                     }}
-                    className='mt-1 h-4 w-4 accent-emerald-400'
+                    className='mt-1 h-4 w-4 accent-[#0b1e3a]'
                   />
-                  <span className='text-sm text-white'>{option.label}</span>
+                  <span className='text-sm text-[#0b1e3a]'>{option.label}</span>
                 </label>
               ))}
             </div>
             {errors.services ? (
-              <p id='services-error' role='alert' className='text-xs text-rose-200'>
+              <p id='services-error' role='alert' className='text-xs font-medium text-red-600'>
                 {errors.services}
               </p>
             ) : null}
@@ -308,14 +317,14 @@ const renderStepByIndex = (currentStep: number) => {
             className='space-y-3'
             aria-describedby={errors.food ? 'food-error' : undefined}
           >
-            <legend className='text-sm font-medium text-white'>
+            <legend className='text-sm font-bold text-gray-700'>
               {'¿Cómo te manejas con la comida?'}
             </legend>
             <div className='space-y-3'>
               {FOOD_OPTIONS.map((option) => (
                 <label
                   key={option.value}
-                  className='flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:border-white/30'
+                  className={optionClassName}
                 >
                   <input
                     type='radio'
@@ -326,14 +335,14 @@ const renderStepByIndex = (currentStep: number) => {
                       setFood(event.target.value);
                       setErrors({});
                     }}
-                    className='mt-1 h-4 w-4 accent-emerald-400'
+                    className='mt-1 h-4 w-4 accent-[#0b1e3a]'
                   />
-                  <span className='text-sm text-white'>{option.label}</span>
+                  <span className='text-sm text-[#0b1e3a]'>{option.label}</span>
                 </label>
               ))}
             </div>
             {errors.food ? (
-              <p id='food-error' role='alert' className='text-xs text-rose-200'>
+              <p id='food-error' role='alert' className='text-xs font-medium text-red-600'>
                 {errors.food}
               </p>
             ) : null}
@@ -342,14 +351,14 @@ const renderStepByIndex = (currentStep: number) => {
       case 5:
         return (
           <fieldset className='space-y-3'>
-            <legend className='text-sm font-medium text-white'>
+            <legend className='text-sm font-bold text-gray-700'>
               Extras / Gastos recurrentes
             </legend>
             <div className='space-y-3'>
               {EXTRAS_OPTIONS.map((option) => (
                 <label
                   key={option.id}
-                  className='flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:border-white/30'
+                  className={optionClassName}
                 >
                   <input
                     type='checkbox'
@@ -359,9 +368,9 @@ const renderStepByIndex = (currentStep: number) => {
                       toggleExtra(option.id);
                       setErrors({});
                     }}
-                    className='mt-1 h-4 w-4 accent-emerald-400'
+                    className='mt-1 h-4 w-4 accent-[#0b1e3a]'
                   />
-                  <span className='text-sm text-white'>{option.label}</span>
+                  <span className='text-sm text-[#0b1e3a]'>{option.label}</span>
                 </label>
               ))}
             </div>
@@ -373,25 +382,42 @@ const renderStepByIndex = (currentStep: number) => {
   };
 
   return (
-    <main className='mx-auto max-w-2xl space-y-6 px-4 py-10 sm:py-14'>
-      <header className='space-y-3'>
-        <h1 className='text-3xl font-semibold text-white'>
+    <PageSurface>
+    <main className='grid w-full gap-8 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)] lg:items-start'>
+      <header className='space-y-3 lg:sticky lg:top-28'>
+        <h1 className='text-3xl font-extrabold text-brand-navy sm:text-4xl'>
           {'Estim\u00e1 tu mes en 30 segundos'}
         </h1>
-        <p className='text-sm text-white/80'>
-          {'Respondé estas preguntas y conocé como podrias llegar a terminar tu mes.'}
+        <p className='max-w-xl text-sm leading-6 text-slate-600 sm:text-base'>
+          {'Respondé estas preguntas y conocé cómo podrías llegar a terminar tu mes.'}
         </p>
+        <div className='border-l-4 border-brand-yellow pl-4'>
+          <h2 className='text-sm font-bold text-brand-navy'>Una estimación rápida</h2>
+          <p className='mt-1 text-sm leading-6 text-slate-600'>
+            Usamos rangos cotidianos para darte una referencia clara, sin registros ni planillas.
+          </p>
+        </div>
       </header>
 
- <section className='rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6'>
+ <section className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7'>
   <form onSubmit={handleNext} className='space-y-6'>
-    <div className='flex items-center justify-between text-xs text-white/60'>
+    <div className='space-y-2'>
+      <div className='flex items-center justify-between text-xs font-semibold text-gray-600'>
+        <span>{step <= TOTAL_STEPS ? `Paso ${step} de ${TOTAL_STEPS}` : 'Estimación completa'}</span>
+        <span>{Math.min(step, TOTAL_STEPS) * 20}%</span>
+      </div>
+      <div className='h-1.5 overflow-hidden rounded-full bg-gray-100'>
+        <div
+          className='h-full rounded-full bg-brand-yellow transition-[width] duration-300 motion-reduce:transition-none'
+          style={{ width: `${Math.min(step, TOTAL_STEPS) * 20}%` }}
+        />
+      </div>
     </div>
 
     {/* pasos acumulados */}
-    <div ref={stepRef} className='space-y-10'>
+    <div ref={stepRef} className='space-y-8'>
       {Array.from({ length: Math.min(step, TOTAL_STEPS) }, (_, i) => (
-        <div key={i}>{renderStepByIndex(i + 1)}</div>
+        <div key={i} className='border-b border-slate-200 pb-8 last:border-b-0 last:pb-0'>{renderStepByIndex(i + 1)}</div>
       ))}
     </div>
 
@@ -402,14 +428,14 @@ const renderStepByIndex = (currentStep: number) => {
           <button
             type='button'
             onClick={handleBack}
-            className='rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white hover:border-white/40'
+            className='inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-brand-navy transition-colors hover:border-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2'
           >
             {'Atr\u00e1s'}
           </button>
         )}
         <button
           type='submit'
-          className='rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-emerald-300'
+          className='inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-yellow px-5 py-2 text-sm font-bold text-brand-navy transition-colors hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2'
         >
           {step === TOTAL_STEPS ? 'Ver resultado' : 'Siguiente'}
         </button>
@@ -419,37 +445,36 @@ const renderStepByIndex = (currentStep: number) => {
     
             {/* RESULTADO FINAL AL FONDO */}
   {step > TOTAL_STEPS && (
-    <div className='mt-12 space-y-6'>
-            <div className='space-y-2'>
-              <h2 className='text-lg font-semibold text-white'>
+    <div className='mt-10'>
+            <ResultPanel eyebrow='Resultado estimado'>
+              <h2 className='mt-5 text-sm font-semibold text-white'>
                 {'Con esta estimación, este mes te quedaría a fin de mes'}
               </h2>
- <p className={`text-4xl font-semibold ${saldoColor}`}>
+ <p className={`mt-2 text-4xl font-extrabold tabular-nums ${saldoColor}`}>
   {formatUYU(saldoEstimado)}
 </p>
 
 
-              <p className='text-sm text-white/80'>{saldoMensaje}</p>
-            </div>
+              <p className='mt-2 text-sm text-slate-300'>{saldoMensaje}</p>
 
-   <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+   <div className='mt-6 border-y border-white/15 py-4'>
 
-  <div className='space-y-1 text-sm text-white/70'>
+  <div className='grid gap-3 text-sm text-slate-300 sm:grid-cols-3 sm:divide-x sm:divide-white/15'>
     <p>
       Ingresos:{' '}
-      <span className='font-medium text-white'>
+      <span className='block font-bold tabular-nums text-white'>
         {formatUYU(incomeValue)}
       </span>
     </p>
     <p>
       Gastos estimados:{' '}
-      <span className='font-medium text-white'>
+      <span className='block font-bold tabular-nums text-white'>
         {formatUYU(totalGastosEstimados)}
       </span>
     </p>
     <p>
       Saldo final estimado:{' '}
-      <span className='font-medium text-white'>
+      <span className='block font-bold tabular-nums text-white'>
         {formatUYU(saldoEstimado)}
       </span>
     </p>
@@ -457,32 +482,34 @@ const renderStepByIndex = (currentStep: number) => {
 </div>
 
 
-            <p className='text-xs text-white/50'>
+            <p className='mt-5 text-xs text-slate-300'>
               {'Estimaci\u00f3n orientativa. No es asesoramiento financiero.'}
             </p>
 
             <button
               type='button'
               onClick={handleReset}
-              className='rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white hover:border-white/40'
+              className='mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-white/30 bg-transparent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-navy'
             >
               Recalcular
             </button>
 
-            <div className='rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4'>
-              <p className='text-sm text-white/80'>
+            <div className='mt-6 border-t border-white/15 pt-5'>
+              <p className='text-sm text-slate-200'>
                 {'Si quer\u00e9s llevar tu mes con m\u00e1s claridad y seguimiento, probá Mi Admi.'}
               </p>
               <a
-  href='/login?mode=signup'
-  className='mt-3 block w-full rounded-full bg-emerald-400 px-4 py-2 text-center text-sm font-semibold text-slate-900 hover:bg-emerald-300'
+  href='/home'
+  className='mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-yellow px-5 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-navy'
 >
   Empezar gratis
 </a>
             </div>
+            </ResultPanel>
           </div>
         )}
       </section>
     </main>
+    </PageSurface>
   );
 }

@@ -4,6 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-brand-navy: #0b1e3a;
+  --color-brand-blue: #1d4ed8;
+  --color-brand-yellow: #facc15;
+  --color-brand-canvas: #f8fafc;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -118,5 +122,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  :focus-visible {
+    outline-color: #1d4ed8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

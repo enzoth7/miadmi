@@ -29,6 +29,7 @@ import {
   buildPlannedPurchaseSeries,
   getCurrentMonthKey,
 } from "../../../../lib/installments";
+import { PageSurface, Reveal } from "../../../../components/financial/FinancialPrimitives";
 
 const LOCKED_ESTIMABLE_EXPENSE_IDS = new Set(["prestamos", "tarjetas"]);
 
@@ -321,7 +322,7 @@ export default function AjustesEstimacionEspecificaPage() {
       window.removeEventListener("miadmi:data-updated", refresh);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [currentMonthKey, normalizeSeries, seriesLength]);
+  }, []);
 
   const resolvedIngresos = useMemo(() => {
     return activeIncomeCategories.map((cat) => {
@@ -333,7 +334,7 @@ export default function AjustesEstimacionEspecificaPage() {
       });
       return { id: cat.id, label: cat.label, values };
     });
-  }, [baseIngresos, projection.ingresos]);
+  }, [activeIncomeCategories, baseIngresos, projection.ingresos]);
 
   const resolvedEgresos = useMemo(() => {
     return activeExpenseCategories.map((cat) => {
@@ -354,7 +355,13 @@ export default function AjustesEstimacionEspecificaPage() {
       });
       return { id: cat.id, label: cat.label, values };
     });
-  }, [baseEgresos, projection.egresos, prestamosSeries, tarjetasSeries]);
+  }, [
+    activeExpenseCategories,
+    baseEgresos,
+    projection.egresos,
+    prestamosSeries,
+    tarjetasSeries,
+  ]);
   const resolvedAhorro = useMemo(() => {
     return Array.from({ length: 12 }, (_, idx) => {
       const raw = projection.ahorro?.[idx];
@@ -635,7 +642,7 @@ const sanitizedProj = sanitizeProjection(
     return () => {
       active = false;
     };
-  }, []);
+  }, [currentMonthKey, normalizeSeries, seriesLength]);
 
   // Actualizar las series de préstamos y tarjetas cuando cambien los estimables
   useEffect(() => {
@@ -916,28 +923,29 @@ const handleCellChange = (section, id, monthIdx, value) => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <PageSurface>
+    <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wide text-amber-200">Premium</p>
-          <h1 className="text-2xl font-semibold text-white md:text-3xl">
+          <p className="text-sm font-semibold text-brand-blue">Ajustes avanzados</p>
+          <h1 className="text-2xl font-semibold text-brand-navy md:text-3xl">
             Hacer ajustes
           </h1>
-          <p className="text-sm text-white/80 md:text-base">
+          <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
             Editá celdas como en Excel: cada categoría por mes. Los cambios impactan la
             tabla de Proyección en Estimación específica.
           </p>
         </div>
         <Link
           href="/estimacion/especifica"
-          className="inline-flex items-center rounded-lg border border-white/30 px-4 py-2 text-sm text-white transition hover:bg-white/10"
+          className="inline-flex min-h-11 items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-brand-blue transition hover:border-blue-300 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
           Volver a Estimación específica
         </Link>
       </header>
 
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white/95 p-4 text-slate-900 shadow">
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
+      <Reveal><section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm sm:p-6">
+        <div className="overflow-x-auto border-y border-slate-200">
           <table className="min-w-full table-fixed border-collapse text-sm">
             <thead className="bg-slate-100 text-slate-600">
               <tr>
@@ -956,7 +964,7 @@ const handleCellChange = (section, id, monthIdx, value) => {
                   <td key={`saldo-inicial-${idx}`} className="px-3 py-2 text-right">
                     {idx === 0 ? (
                       <input
-                        className="w-full rounded border border-blue-200 bg-white px-2 py-1 text-right text-sm text-blue-900 outline-none focus:border-blue-400"
+                        className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-2 py-2 text-right text-base text-brand-navy outline-none focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                         value={String(baseSaldo ?? 0)}
                         onChange={(e) => setBaseSaldo(n(e.target.value))}
                         inputMode="decimal"
@@ -1047,10 +1055,10 @@ const handleCellChange = (section, id, monthIdx, value) => {
           </table>
         </div>
 
-        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-900">
-          <p className="text-xs uppercase tracking-wide text-blue-700">KPI</p>
-          <p className="text-lg font-semibold">Ahorro acumulado</p>
-          <p className="text-2xl font-semibold">{formatUYU(resumenAcumulado.ahorroTotal)}</p>
+        <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 text-brand-navy sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="inline-flex rounded-full bg-brand-yellow px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-navy">KPI</p>
+          <p className="mt-2 text-lg font-semibold">Ahorro acumulado</p></div>
+          <p className="text-2xl font-semibold tabular-nums">{formatUYU(resumenAcumulado.ahorroTotal)}</p>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1058,7 +1066,7 @@ const handleCellChange = (section, id, monthIdx, value) => {
             {feedback.message
               ? feedback.message
               : loaded
-              ? "Modificá los valores y guardá tus ajustes premium."
+              ? "Modificá los valores y guardá tus ajustes en este dispositivo."
               : "Cargando datos guardados..."}
           </div>
           <button
@@ -1066,17 +1074,18 @@ const handleCellChange = (section, id, monthIdx, value) => {
             onClick={handleSave}
             disabled={!loaded || saving}
             className={[
-              "inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+              "inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2",
               !loaded || saving
                 ? "cursor-not-allowed border border-slate-300 bg-slate-200 text-slate-500"
-                : "border border-emerald-300 bg-emerald-500 text-white hover:bg-emerald-600",
+                : "bg-brand-yellow text-brand-navy hover:bg-yellow-300",
             ].join(" ")}
           >
             {saving ? "Guardando..." : "Guardar cambios"}
           </button>
         </div>
-      </section>
+      </section></Reveal>
     </div>
+    </PageSurface>
   );
 }
 
@@ -1118,9 +1127,9 @@ function AdjustmentRow({
           <td key={`${label}-${idx}`} className="px-2 py-1 text-right">
             <input
               className={[
-                "w-20 rounded border px-2 py-1 text-right text-sm text-slate-900 outline-none transition bg-white",
+                "min-h-11 w-24 rounded-xl border px-2 py-2 text-right text-base text-slate-900 outline-none transition bg-white focus:ring-2 focus:ring-blue-100",
                 override
-                  ? "border-amber-400 bg-amber-50 text-amber-900"
+                  ? "border-brand-yellow bg-yellow-50 text-brand-navy"
                   : readOnly
                   ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
                   : config.input,

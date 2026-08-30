@@ -14,7 +14,7 @@ import {
 } from "../../../lib/app-data";
 import { buildDashboardSummary, type DashboardSummary } from "../../../lib/summary";
 import { LS_ESPECIFICA, LS_ESTIMABLES } from "../especifica/constants";
-import { AhorrosOnboardingTour } from "../../../components/onboarding/AhorrosOnboardingTour";
+import { PageSurface, ResultPanel, Reveal } from "../../../components/financial/FinancialPrimitives";
 
 const LS_GENERAL = "miadmi:estimacion_general";
 const MODE_KEY = "miadmi:estimacion_mode";
@@ -115,7 +115,6 @@ export default function AhorrosPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [hasEstimacionesData, setHasEstimacionesData] = useState(false);
   const [loadingEstimaciones, setLoadingEstimaciones] = useState(true);
-  const [showTourAhorros, setShowTourAhorros] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -194,28 +193,6 @@ export default function AhorrosPage() {
       active = false;
     };
   }, []);
-
-useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const key = "miadmi:tour-ahorros";
-
-  try {
-    const stored = window.localStorage.getItem(key);
-
-    if (!stored) {
-      // primera vez que entra
-      window.localStorage.setItem(key, "pending");
-    }
-
-    if (window.localStorage.getItem(key) === "pending") {
-      setShowTourAhorros(true);
-      window.localStorage.setItem(key, "done");
-    }
-  } catch {
-    // ignore storage issues
-  }
-}, []);
 
 
   const ahorroActualNum = useMemo(() => safeParseNumber(ahorroActual), [ahorroActual]);
@@ -318,138 +295,157 @@ const hasCapacidadEstimacion = Number.isFinite(summary?.totals?.resultado);
   }, [totalAhorrosEnUyu, totalAhorrosEnUsd, capacidadMensual, tipoCambioNum]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl font-semibold text-white">Ahorros</h1>
-        <p className="text-sm text-white/70">
-          Calculamos tu capacidad de ahorro mensual segun la estimacion activa (simple o avanzada).
-          Completa tus ahorros actuales y el tipo de cambio para ver el impacto a 12 meses.
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">Ahorros</h1>
+        <p className="max-w-3xl text-sm text-gray-600">
+          Calculamos tu capacidad de ahorro mensual según la estimación activa. Completá tus
+          ahorros actuales y el tipo de cambio para ver el impacto a 12 meses.
         </p>
+
+        <div className="mt-5 grid border-y border-slate-200 text-sm sm:grid-cols-2 sm:divide-x sm:divide-slate-200">
+          <div className="py-4 sm:pr-6">
+            <h2 className="text-sm font-bold text-brand-navy">Ahorros actuales</h2>
+            <p className="mt-1 text-xs leading-snug text-gray-600">
+              Sumá lo que ya tenés en pesos y dólares para partir de una base real.
+            </p>
+          </div>
+          <div className="border-t border-slate-200 py-4 sm:border-t-0 sm:pl-6">
+            <h2 className="text-sm font-bold text-brand-navy">Proyección mensual</h2>
+            <p className="mt-1 text-xs leading-snug text-gray-600">
+              Usamos el resultado de tu estimación para proyectar los próximos 12 meses.
+            </p>
+          </div>
+        </div>
       </header>
 
       <div className="space-y-5">
         <section
           id="ahorros-inputs"
-          className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-5"
+          className="space-y-5 pt-2"
         >
           <div>
-            <p className="text-sm font-semibold text-white">Ingresa tus datos</p>
-            <p className="text-xs text-white/70">
-              Ajusta tus ahorros actuales y el tipo de cambio para ver las proyecciones.
+            <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
+            <p className="mt-1 text-xs text-gray-600">
+              Ajustá tus ahorros actuales y el tipo de cambio para ver las proyecciones.
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <label className="block text-xs font-medium text-white/70">
+              <label htmlFor="ahorro-actual-uyu" className="block text-xs font-bold text-gray-700">
                 Ahorros actuales (UYU)
               </label>
               <input
+                id="ahorro-actual-uyu"
                 type="number"
                 inputMode="decimal"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 placeholder="Ej: 50.000"
                 value={ahorroActual}
                 onChange={(e) => handleAhorroActualChange(e.target.value)}
               />
-              <p className="text-xs text-white/60">
-                Es el total que tenes hoy entre cuentas, efectivo, fondos, etc.
+              <p className="text-xs text-gray-500">
+                Es el total que tenés hoy entre cuentas, efectivo y fondos.
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-white/70">
-                  Tipo de cambio (UYU {">"} USD)
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400"
-                  placeholder="Ej: 40"
-                  value={tipoCambio}
-                  onChange={(e) => handleTipoCambioChange(e.target.value)}
-                />
-                <p className="text-xs text-white/60">Solo se usa para la conversion a dolares.</p>
-              </div>
-              
-            </div>
             <div className="space-y-2">
-                <label className="block text-xs font-medium text-white/70">
-                  Ahorros actuales (USD, opcional)
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400"
-                  placeholder="Ej: 1.000"
-                  value={ahorroActualUsd}
-                  onChange={(e) => handleAhorroActualUsdChange(e.target.value)}
-                />
-                <p className="text-xs text-white/60">
-                  Los calculos principales quedan en pesos; este valor es para convertir a USD.
-                </p>
-              </div>
+              <label htmlFor="ahorro-actual-usd" className="block text-xs font-bold text-gray-700">
+                Ahorros actuales (USD, opcional)
+              </label>
+              <input
+                id="ahorro-actual-usd"
+                type="number"
+                inputMode="decimal"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+                placeholder="Ej: 1.000"
+                value={ahorroActualUsd}
+                onChange={(e) => handleAhorroActualUsdChange(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Este valor se convierte a pesos para calcular el total.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="tipo-cambio" className="block text-xs font-bold text-gray-700">
+                Tipo de cambio (UYU {">"} USD)
+              </label>
+              <input
+                id="tipo-cambio"
+                type="number"
+                inputMode="decimal"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+                placeholder="Ej: 40"
+                value={tipoCambio}
+                onChange={(e) => handleTipoCambioChange(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">Se usa solamente para la conversión entre monedas.</p>
+            </div>
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div
+        <section className="space-y-4 pt-2">
+          <ResultPanel
+            eyebrow="Resultado proyectado"
             className={[
-              "rounded-2xl border px-5 py-4 bg-white/5",
-              capacidadMensual > 0 ? "border-emerald-400/60" : "border-rose-400/60",
+              "p-6",
+              capacidadMensual > 0 ? "" : "ring-1 ring-rose-300/50",
             ].join(" ")}
           >
-            <p className="text-sm font-semibold text-white">Capacidad de ahorro mensual</p>
+            <p className="mt-5 text-sm font-semibold text-white">Capacidad de ahorro mensual</p>
             <p
               className={[
-                "mt-2 text-3xl font-semibold",
-                capacidadMensual > 0 ? "text-emerald-200" : "text-rose-200",
+                "mt-2 text-3xl font-extrabold tabular-nums sm:text-4xl",
+                capacidadMensual > 0 ? "text-emerald-300" : "text-rose-300",
               ].join(" ")}
             >
               {canShowEstimacion ? formatUYU(capacidadMensual) : "-"}
             </p>
             {tipoCambioNum > 0 && canShowEstimacion ? (
-              <p className="text-xs text-white/70">~ {formatUSD(capacidadMensual / tipoCambioNum)}</p>
+              <p className="text-xs text-gray-300">~ {formatUSD(capacidadMensual / tipoCambioNum)}</p>
             ) : null}
-            <p className="mt-2 text-sm text-white/80">{capacityDescription}</p>
-          </div>
+            <p className="mt-2 max-w-3xl text-sm text-gray-300">{capacityDescription}</p>
 
-          <div id="ahorros-totales" className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
-              <p className="text-xs text-white/60">Total ahorros en UYU</p>
-              <p className="mt-2 text-xl font-semibold">{formatUYU(totalAhorrosEnUyu)}</p>
+
+          <div id="ahorros-totales" className="mt-6 grid border-y border-white/15 md:grid-cols-2 md:divide-x md:divide-white/15">
+            <div className="py-4 md:pr-5">
+              <p className="text-xs font-medium text-slate-300">Total ahorros en UYU</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-white">{formatUYU(totalAhorrosEnUyu)}</p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
-              <p className="text-xs text-white/60">Total ahorros en USD</p>
-              <p className="mt-2 text-xl font-semibold">{formatUSD(totalAhorrosEnUsd)}</p>
+            <div className="border-t border-white/15 py-4 md:border-t-0 md:pl-5">
+              <p className="text-xs font-medium text-slate-300">Total ahorros en USD</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-white">{formatUSD(totalAhorrosEnUsd)}</p>
             </div>
           </div>
+          </ResultPanel>
 
-          <section className="text-sm text-white/80">
+          <section className="text-sm text-gray-600">
             <p>
-              Estos ahorros que ya tenes, sumados a tu capacidad de ahorro mensual, te dan la siguiente
-              proyeccion a 12 meses.
+              Tus ahorros actuales, sumados a tu capacidad mensual, dan la siguiente proyección a 12
+              meses.
             </p>
           </section>
 
-          <section
+          <Reveal><section
             id="ahorros-proyeccion"
-            className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-lg space-y-3"
+            className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
           >
             <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Proyeccion de ahorros (12 meses)</p>
-                <p className="text-xs text-white/70">
+                <h2 className="text-base font-bold text-[#0b1e3a]">Proyección de ahorros (12 meses)</h2>
+                <p className="text-xs text-gray-600">
                   Partimos de tus ahorros actuales y sumamos tu capacidad mensual cada mes.
                 </p>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-white/10 bg-[#050B18]">
-              <table className="min-w-full text-sm text-right text-white/80">
-                <thead className="bg-white/5 text-xs uppercase tracking-wide text-white/60">
+            <div className="overflow-x-auto border-y border-slate-200 bg-white">
+              <table className="min-w-full text-right text-sm text-slate-700">
+                <thead className="bg-gray-100 text-xs uppercase tracking-wide text-slate-600">
                   <tr>
                     <th className="px-3 py-2 text-left">Moneda</th>
                     {monthLabels.map((label, idx) => (
@@ -460,16 +456,16 @@ const hasCapacidadEstimacion = Number.isFinite(summary?.totals?.resultado);
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-t border-white/10">
-                    <td className="px-3 py-2 text-left text-xs font-semibold text-white/80">UYU</td>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-3 py-2 text-left text-xs font-bold text-[#0b1e3a]">UYU</td>
                     {projectionRows.map((row) => (
                       <td key={`uyu-${row.monthIndex}`} className="px-3 py-2 tabular-nums">
                         {formatUYU(row.saldoUyu)}
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-t border-white/10">
-                    <td className="px-3 py-2 text-left text-xs font-semibold text-white/80">USD</td>
+                  <tr className="border-t border-gray-200 bg-gray-50/70">
+                    <td className="px-3 py-2 text-left text-xs font-bold text-[#0b1e3a]">USD</td>
                     {projectionRows.map((row) => (
                       <td key={`usd-${row.monthIndex}`} className="px-3 py-2 tabular-nums">
                         {formatUSD(row.saldoUsd)}
@@ -479,22 +475,20 @@ const hasCapacidadEstimacion = Number.isFinite(summary?.totals?.resultado);
                 </tbody>
               </table>
             </div>
-          </section>
+          </section></Reveal>
 
           {showFallback ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
-              <p className="font-semibold text-white">No pudimos calcular tu capacidad de ahorro.</p>
-              <p className="mt-1">
-                Configura primero tus Estimaciones (ingresos y egresos, en modo simple o avanzado) para
+            <div className="rounded-2xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-brand-navy">
+              <p className="font-bold">No pudimos calcular tu capacidad de ahorro.</p>
+              <p className="mt-1 text-slate-700">
+                Configurá primero tus estimaciones de ingresos y egresos para
                 que Mi Admi pueda estimar tu capacidad mensual.
               </p>
             </div>
           ) : null}
         </section>
-        {showTourAhorros ? (
-          <AhorrosOnboardingTour onClose={() => setShowTourAhorros(false)} />
-        ) : null}
       </div>
     </div>
+    </PageSurface>
   );
 }

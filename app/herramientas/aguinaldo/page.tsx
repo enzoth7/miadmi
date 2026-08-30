@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AguinaldoOnboardingTour } from "../../../components/onboarding/AguinaldoOnboardingTour";
+import { useState } from "react";
+import { PageSurface, ResultPanel } from "../../../components/financial/FinancialPrimitives";
 
 export default function AguinaldoPage() {
   const [modo, setModo] = useState<"fijo" | "variable">("fijo");
   const [sueldoMensual, setSueldoMensual] = useState<string>("");
   const [mesesTrabajados, setMesesTrabajados] = useState<string>("6");
   const [meses, setMeses] = useState<string[]>(["", "", "", "", "", ""]);
-  const [showTour, setShowTour] = useState(false);
 
   const sueldoNum = parseFloat(sueldoMensual.replace(",", "."));
   const mesesNum = parseInt(mesesTrabajados || "0", 10);
@@ -30,37 +29,27 @@ export default function AguinaldoPage() {
 
   const medioAguinaldoVariable = totalSemestre > 0 ? totalSemestre / 12 : 0;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      if (window.localStorage.getItem("miadmi:tour-herramienta-aguinaldo") === "pending") {
-        setShowTour(true);
-      }
-    } catch {
-      // ignore storage issues
-    }
-  }, []);
-
   return (
-    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">
           Calculadora de aguinaldo
         </h1>
         <p className="text-sm text-gray-600">
           Calculá de forma aproximada cuánto te corresponde de aguinaldo según lo que cobraste en el semestre.
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo nominal</h4>
+        <div className="mt-4 grid border-y border-slate-200 text-sm sm:grid-cols-2 sm:divide-x sm:divide-slate-200">
+          <div className="py-4 sm:pr-6">
+            <h2 className="text-sm font-bold text-brand-navy">Sueldo nominal</h2>
             <p className="mt-1 text-xs text-gray-600 leading-snug">
               Es lo que ganás antes de descuentos (sueldo bruto).
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo líquido</h4>
+          <div className="border-t border-slate-200 py-4 sm:border-t-0 sm:pl-6">
+            <h2 className="text-sm font-bold text-brand-navy">Sueldo líquido</h2>
             <p className="mt-1 text-xs text-gray-600 leading-snug">
               Es lo que efectivamente cobrás en mano después de BPS e IRPF.
             </p>
@@ -74,9 +63,9 @@ export default function AguinaldoPage() {
       >
         <button
           type="button"
-          className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+          className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
             modo === "fijo"
-              ? "bg-[#0b1e3a] text-white shadow"
+              ? "bg-brand-yellow text-brand-navy shadow-sm"
               : "text-gray-600 hover:text-black"
           }`}
           onClick={() => setModo("fijo")}
@@ -85,9 +74,9 @@ export default function AguinaldoPage() {
         </button>
         <button
           type="button"
-          className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+          className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
             modo === "variable"
-              ? "bg-[#0b1e3a] text-white shadow"
+              ? "bg-brand-yellow text-brand-navy shadow-sm"
               : "text-gray-600 hover:text-black"
           }`}
           onClick={() => setModo("variable")}
@@ -98,16 +87,16 @@ export default function AguinaldoPage() {
 
       <section id="aguinaldo-inputs" className="space-y-4 pt-2">
         {modo === "fijo" && (
-          <div className="space-y-4">
-            <h2 className="text-base font-bold text-[#0b1e3a]">
+          <fieldset className="space-y-4">
+            <legend className="text-base font-bold text-brand-navy">
               Calculadora rápida (sueldo fijo)
-            </h2>
+            </legend>
             <p className="text-xs text-gray-600 max-w-xl">
               Para el medio aguinaldo de <strong>junio</strong> se suman los sueldos nominales de diciembre a mayo. Para el medio aguinaldo de <strong>diciembre</strong> se suman los sueldos de junio a noviembre.
             </p>
             <div className="flex flex-col gap-4 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label htmlFor="aguinaldo-sueldo" className="block text-xs font-bold text-gray-700 mb-1">
                   Sueldo nominal mensual
                 </label>
                 <div className="flex items-center gap-2">
@@ -115,9 +104,10 @@ export default function AguinaldoPage() {
                     $
                   </div>
                   <input
+                    id="aguinaldo-sueldo"
                     type="number"
                     inputMode="decimal"
-                    className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                     placeholder="Ej: 30.000"
                     value={sueldoMensual}
                     onChange={(e) => setSueldoMensual(e.target.value)}
@@ -126,14 +116,15 @@ export default function AguinaldoPage() {
               </div>
 
               <div className="w-full md:w-48">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label htmlFor="aguinaldo-meses" className="block text-xs font-bold text-gray-700 mb-1">
                   Meses trabajados en semestre
                 </label>
                 <input
+                  id="aguinaldo-meses"
                   type="number"
                   min={1}
                   max={6}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={mesesTrabajados}
                   onChange={(e) => setMesesTrabajados(e.target.value)}
                 />
@@ -141,25 +132,23 @@ export default function AguinaldoPage() {
             </div>
 
             <div className="pt-4">
-              <div className="rounded-2xl bg-[#0b1e3a] text-white p-6 shadow-xl border border-white/10">
-                <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">
-                  Resultado Estimado (Medio Aguinaldo Bruto)
-                </p>
-                <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
+              <ResultPanel eyebrow="Resultado estimado">
+                <p className="mt-5 text-sm font-semibold text-white">Medio Aguinaldo Bruto</p>
+                <p className="mt-2 text-3xl font-extrabold tabular-nums text-white sm:text-4xl">
                   {medioAguinaldoFijo > 0
                     ? `$ ${medioAguinaldoFijo.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`
                     : "—"}
                 </p>
-              </div>
+              </ResultPanel>
             </div>
-          </div>
+          </fieldset>
         )}
 
         {modo === "variable" && (
-          <div className="space-y-4">
-            <h2 className="text-base font-bold text-[#0b1e3a]">
+          <fieldset className="space-y-4">
+            <legend className="text-base font-bold text-brand-navy">
               Calculadora rápida (sueldo variable)
-            </h2>
+            </legend>
             <p className="text-xs text-gray-600 max-w-xl">
               Ingresá el sueldo nominal de cada mes correspondiente al semestre.
             </p>
@@ -168,13 +157,14 @@ export default function AguinaldoPage() {
               {["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6"].map(
                 (label, index) => (
                   <div key={index} className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-700">
+                    <label htmlFor={`aguinaldo-mes-${index}`} className="block text-xs font-bold text-gray-700">
                       {label}
                     </label>
                     <input
+                      id={`aguinaldo-mes-${index}`}
                       type="number"
                       inputMode="decimal"
-                      className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                      className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                       placeholder="0"
                       value={meses[index]}
                       onChange={(e) => updateMes(index, e.target.value)}
@@ -185,24 +175,20 @@ export default function AguinaldoPage() {
             </div>
 
             <div className="pt-4">
-              <div className="rounded-2xl bg-[#0b1e3a] text-white p-6 shadow-xl border border-white/10">
-                <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">
-                  Resultado Estimado (Medio Aguinaldo Bruto)
-                </p>
-                <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
+              <ResultPanel eyebrow="Resultado estimado">
+                <p className="mt-5 text-sm font-semibold text-white">Medio Aguinaldo Bruto</p>
+                <p className="mt-2 text-3xl font-extrabold tabular-nums text-white sm:text-4xl">
                   {medioAguinaldoVariable > 0
                     ? `$ ${medioAguinaldoVariable.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`
                     : "—"}
                 </p>
-              </div>
+              </ResultPanel>
             </div>
-          </div>
+          </fieldset>
         )}
       </section>
 
-      {showTour ? (
-        <AguinaldoOnboardingTour onClose={() => setShowTour(false)} />
-      ) : null}
     </div>
+    </PageSurface>
   );
 }

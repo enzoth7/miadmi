@@ -1,9 +1,13 @@
 ﻿import EstimaTuMesClient from './EstimaTuMesClient';
 
-export const metadata = {
-  title: 'Estimá tu mes en 30 segundos | Mi Admi',
-  description: 'Respondé 5 preguntas y obtené una estimación orientativa de gastos y saldo mensual en Uruguay.',
-};
+import { createSeoMetadata } from '../../lib/seo';
+
+export const metadata = createSeoMetadata({
+  title: 'Estimá tus gastos del mes',
+  description: 'Respondé preguntas simples y obtené una estimación gratuita de tus gastos, ahorro y saldo mensual en Uruguay.',
+  path: '/estima-tu-mes',
+  keywords: ['estimador de gastos mensuales', 'calculadora de presupuesto Uruguay'],
+});
 
 export default function EstimaTuMesPage() {
   return <EstimaTuMesClient />;

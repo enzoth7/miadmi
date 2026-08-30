@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageSurface, ResultPanel } from "../../../components/financial/FinancialPrimitives";
 
 type MotivoEgreso = "involuntario" | "renuncia";
 type TipoSueldo = "fijo" | "variable";
@@ -56,9 +57,10 @@ export default function SeguroDesempleoPage() {
   const mostrarTabla = esInvoluntario && cumpleRequisitoPlanilla && basePromedio > 0 && montos.length > 0;
 
   return (
-    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">
           Calculadora de seguro de desempleo
         </h1>
         <p className="text-sm text-gray-600">
@@ -68,9 +70,9 @@ export default function SeguroDesempleoPage() {
         <div className="inline-flex items-center rounded-full bg-gray-100 p-1.5 border border-gray-200 mt-2">
           <button
             type="button"
-            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+            className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
               motivoEgreso === "involuntario"
-                ? "bg-[#0b1e3a] text-white shadow"
+                ? "bg-brand-yellow text-brand-navy shadow-sm"
                 : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setMotivoEgreso("involuntario")}
@@ -79,9 +81,9 @@ export default function SeguroDesempleoPage() {
           </button>
           <button
             type="button"
-            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+            className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
               motivoEgreso === "renuncia"
-                ? "bg-[#0b1e3a] text-white shadow"
+                ? "bg-brand-yellow text-brand-navy shadow-sm"
                 : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setMotivoEgreso("renuncia")}
@@ -91,25 +93,26 @@ export default function SeguroDesempleoPage() {
         </div>
       </header>
 
-      <section className="space-y-4 pt-2">
-        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
+      <fieldset className="space-y-4 border-t border-slate-200 pt-6">
+        <legend className="pr-4 text-base font-bold text-brand-navy">Ingresá tus datos</legend>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label htmlFor="seguro-dias-planilla" className="block text-xs font-bold text-gray-700 mb-1">
               Días en planilla en los últimos 12 meses (mínimo 180 días)
             </label>
             <input
+              id="seguro-dias-planilla"
               type="number"
-              className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
               value={diasPlanilla}
               onChange={(e) => setDiasPlanilla(e.target.value)}
             />
             {diasPlanillaNum > 0 && (
               <p className={`mt-1 text-xs font-semibold ${cumpleRequisitoPlanilla ? "text-emerald-700" : "text-red-600"}`}>
                 {cumpleRequisitoPlanilla
-                  ? "✓ Cumplís con el requisito mínimo de 180 días en planilla."
-                  : "✗ No alcanzás el requisito mínimo de 180 días para acceder al subsidio."}
+                  ? "Cumplís con el requisito mínimo de 180 días en planilla."
+                  : "No alcanzás el requisito mínimo de 180 días para acceder al subsidio."}
               </p>
             )}
           </div>
@@ -119,8 +122,8 @@ export default function SeguroDesempleoPage() {
             <div className="inline-flex items-center rounded-full bg-gray-100 p-1 border border-gray-200 text-xs font-bold text-gray-600">
               <button
                 type="button"
-                className={`rounded-full px-4 py-1.5 transition-all ${
-                  tipoSueldo === "fijo" ? "bg-[#0b1e3a] text-white shadow" : "hover:text-black"
+                className={`min-h-11 rounded-full px-4 py-2 transition-all ${
+                  tipoSueldo === "fijo" ? "bg-brand-yellow text-brand-navy shadow-sm" : "hover:text-black"
                 }`}
                 onClick={() => setTipoSueldo("fijo")}
               >
@@ -128,8 +131,8 @@ export default function SeguroDesempleoPage() {
               </button>
               <button
                 type="button"
-                className={`rounded-full px-4 py-1.5 transition-all ${
-                  tipoSueldo === "variable" ? "bg-[#0b1e3a] text-white shadow" : "hover:text-black"
+                className={`min-h-11 rounded-full px-4 py-2 transition-all ${
+                  tipoSueldo === "variable" ? "bg-brand-yellow text-brand-navy shadow-sm" : "hover:text-black"
                 }`}
                 onClick={() => setTipoSueldo("variable")}
               >
@@ -140,15 +143,16 @@ export default function SeguroDesempleoPage() {
 
           {tipoSueldo === "fijo" && (
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Sueldo nominal mensual</label>
+              <label htmlFor="seguro-sueldo" className="block text-xs font-bold text-gray-700 mb-1">Sueldo nominal mensual</label>
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 font-bold text-[#0b1e3a]">
                   $
                 </div>
                 <input
+                  id="seguro-sueldo"
                   type="number"
                   inputMode="decimal"
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   placeholder="Ej: 35.000"
                   value={sueldoMensual}
                   onChange={(e) => setSueldoMensual(e.target.value)}
@@ -165,11 +169,12 @@ export default function SeguroDesempleoPage() {
               <div className="grid gap-3 md:grid-cols-3">
                 {["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6"].map((label, index) => (
                   <div key={label} className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-700">{label}</label>
+                    <label htmlFor={`seguro-mes-${index}`} className="block text-xs font-bold text-gray-700">{label}</label>
                     <input
+                      id={`seguro-mes-${index}`}
                       type="number"
                       inputMode="decimal"
-                      className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                      className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                       placeholder="0"
                       value={meses[index]}
                       onChange={(e) => updateMes(index, e.target.value)}
@@ -180,7 +185,7 @@ export default function SeguroDesempleoPage() {
             </div>
           )}
         </div>
-      </section>
+      </fieldset>
 
       {esRenuncia && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-xs text-red-900">
@@ -194,15 +199,15 @@ export default function SeguroDesempleoPage() {
       {esInvoluntario && (
         <section className="space-y-4">
           {mostrarTabla ? (
-            <div className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-6 border border-white/10">
+            <ResultPanel className="mt-6 space-y-6" eyebrow="Resultado estimado">
               <div>
-                <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">Base de cálculo (promedio mensual)</p>
-                <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
+                <p className="mt-5 text-sm font-semibold text-white">Base de cálculo (promedio mensual)</p>
+                <p className="mt-2 text-3xl font-extrabold tabular-nums text-emerald-300 sm:text-4xl">
                   {`$ ${basePromedio.toLocaleString("es-UY", { maximumFractionDigits: 2 })}`}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+              <div className="border-t border-white/15 pt-5">
                 <p className="text-xs font-bold text-gray-300 mb-3">
                   Proyección mensual del subsidio por desempleo (escala decreciente BPS):
                 </p>
@@ -224,7 +229,7 @@ export default function SeguroDesempleoPage() {
               <p className="pt-2 text-[11px] text-gray-400">
                 Cálculo orientativo simplificado de las escalas de BPS para trabajadores mensuales.
               </p>
-            </div>
+            </ResultPanel>
           ) : (
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-xs text-gray-600">
               <p className="font-bold text-gray-900 mb-1">Completá los datos para ver la proyección.</p>
@@ -234,5 +239,6 @@ export default function SeguroDesempleoPage() {
         </section>
       )}
     </div>
+    </PageSurface>
   );
 }

@@ -13,7 +13,7 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -22,7 +22,6 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -31,21 +30,15 @@
   },
   "include": [
     "next-env.d.ts",
-    ".next\\dev/types/**/*.ts",
-    ".next\\dev/types/**/*.ts",
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx",
-    "app/premium/export/page.js",
-    "app/paywall/page.js",
-    "lib/plan.js",
-    "components/PremiumBadge.jsx",
-    "components/SessionProvider.jsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next-dev/types/**/*.ts",
+    ".next-dev/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "next-mercadopago"
+    "node_modules"
   ]
 }

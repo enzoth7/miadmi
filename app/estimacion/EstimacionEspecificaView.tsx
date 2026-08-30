@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
-import { useSessionInfo } from "../../components/SessionProvider";
 import { useRouter } from "next/navigation";
 import {
   INCOME_CATEGORIES,
@@ -27,8 +26,8 @@ import {
   upsertEstimacionEspecifica,
 } from "../../lib/app-data";
 import { buildInstallmentSeries, buildPlannedPurchaseSeries, monthDiff } from "../../lib/installments";
-import { triggerPremiumBlock } from "../../lib/premiumBlocker";
 import ProjectionTableExpanded from "../../app/components/ProjectionTableExpanded";
+import { ResultPanel, Reveal, StaggerGrid, StaggerItem } from "../../components/financial/FinancialPrimitives";
 
 const INCOME_ORDER = [
   "sueldos",
@@ -75,8 +74,80 @@ const ESTIMABLE_EXPENSE_CATEGORIES = BASE_ORDERED_EXPENSE_CATEGORIES.filter(
 
 const MODE_KEY = "miadmi:estimacion_mode";
 
+let dataUpdateTimer: number | null = null;
+
+const emitDataUpdated = () => {
+  if (typeof window === "undefined" || dataUpdateTimer !== null) return;
+  dataUpdateTimer = window.setTimeout(() => {
+    dataUpdateTimer = null;
+    window.dispatchEvent(new Event("miadmi:data-updated"));
+  }, 150);
+};
+
+const generateCustomCategoryId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // fallback below
+    }
+  }
+  return `custom-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const normalizeCustomCategoriesPayload = (raw) => {
+  const ensureEntry = (entry) => {
+    if (!entry || typeof entry !== "object") return null;
+    const label = String(entry?.label ?? entry?.nombre ?? "").trim();
+    if (!label) return null;
+    const rawId = String(entry?.id ?? "").trim();
+    return {
+      id: rawId || generateCustomCategoryId(),
+      label,
+      source: "custom",
+    };
+  };
+  const normalizeList = (list) =>
+    Array.isArray(list) ? list.map(ensureEntry).filter(Boolean) : [];
+  return {
+    ingresos: normalizeList(raw?.ingresos),
+    egresos: normalizeList(raw?.egresos),
+  };
+};
+
+const readCustomCategoriesFromStorage = () => {
+  if (typeof window === "undefined") {
+    return { ingresos: [], egresos: [] };
+  }
+  try {
+    const raw = window.localStorage.getItem(LS_CUSTOM_CATEGORIES);
+    emitDataUpdated();
+    if (!raw) return { ingresos: [], egresos: [] };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return { ingresos: [], egresos: [] };
+    }
+    return normalizeCustomCategoriesPayload(parsed);
+  } catch {
+    return { ingresos: [], egresos: [] };
+  }
+};
+
+const persistCustomCategoriesToStorage = (data) => {
+  if (typeof window === "undefined") return;
+  try {
+    const payload = {
+      ingresos: data.ingresos.map((cat) => ({ id: cat.id, nombre: cat.label })),
+      egresos: data.egresos.map((cat) => ({ id: cat.id, nombre: cat.label })),
+    };
+    window.localStorage.setItem(LS_CUSTOM_CATEGORIES, JSON.stringify(payload));
+    emitDataUpdated();
+  } catch {
+    // ignore storage errors
+  }
+};
+
 export default function EstimacionEspecificaView({
-  highlightSpecificAdjust = false,
   modeOverride = null,
   hideModeToggle = false,
 } = {}) {
@@ -111,7 +182,6 @@ export default function EstimacionEspecificaView({
     tarjetas: 0,
     comprasMes: 0,
   });
-  const [showPremiumCatsNotice, setShowPremiumCatsNotice] = useState(false);
   const [customIncomeCategories, setCustomIncomeCategories] = useState([]);
   const [customExpenseCategories, setCustomExpenseCategories] = useState([]);
   const [categoryMenu, setCategoryMenu] = useState(null);
@@ -124,15 +194,11 @@ export default function EstimacionEspecificaView({
     tarjetas: [],
     compras: [],
   });
-  const { plan, premiumUntil } = useSessionInfo();
   const [activeMode, setActiveMode] = useState(() => modeOverride ?? DEFAULT_ESTIMATION_MODE);
   const [modeSaving, setModeSaving] = useState(false);
   const [modeError, setModeError] = useState("");
   const hydratingRef = useRef(false);
-  const isPremium =
-    plan === "premium" &&
-    (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
-  const monthCount = isPremium ? 24 : 6;
+  const monthCount = 24;
   const resolvedMode = modeOverride ?? activeMode;
   const isActive = resolvedMode === "especifica";
   const shouldSyncMode = !modeOverride;
@@ -204,20 +270,6 @@ export default function EstimacionEspecificaView({
       return changed ? next : prev;
     });
   }, [customExpenseCategories]);
-
-// adentro de tu componente (EstimaciónEspecífica / EspecificaClient / etc.)
-const emitDataUpdated = (() => {
-  let t = null;
-  return () => {
-    if (typeof window === "undefined") return;
-    if (t) return;
-    t = window.setTimeout(() => {
-      t = null;
-      window.dispatchEvent(new Event("miadmi:data-updated"));
-    }, 150);
-  };
-})();
-
 
 const router = useRouter();
 
@@ -357,71 +409,6 @@ const router = useRouter();
     setProjection(snapshot.projection ?? null);
   };
 
-  const generateCustomCategoryId = () => {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      try {
-        return crypto.randomUUID();
-      } catch {
-        // fallback below
-      }
-    }
-    return `custom-${Math.random().toString(36).slice(2, 10)}`;
-  };
-
-  const normalizeCustomCategoriesPayload = (raw) => {
-    const ensureEntry = (entry) => {
-      if (!entry || typeof entry !== "object") return null;
-      const label = String(entry?.label ?? entry?.nombre ?? "").trim();
-      if (!label) return null;
-      const rawId = String(entry?.id ?? "").trim();
-      return {
-        id: rawId || generateCustomCategoryId(),
-        label,
-        source: "custom",
-      };
-    };
-    const normalizeList = (list) =>
-      Array.isArray(list)
-        ? list.map(ensureEntry).filter(Boolean)
-        : [];
-    return {
-      ingresos: normalizeList(raw?.ingresos),
-      egresos: normalizeList(raw?.egresos),
-    };
-  };
-
-  const readCustomCategoriesFromStorage = () => {
-    if (typeof window === "undefined") {
-      return { ingresos: [], egresos: [] };
-    }
-    try {
-      const raw = window.localStorage.getItem(LS_CUSTOM_CATEGORIES);
-      emitDataUpdated();
-      if (!raw) return { ingresos: [], egresos: [] };
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") {
-        return { ingresos: [], egresos: [] };
-      }
-      return normalizeCustomCategoriesPayload(parsed);
-    } catch {
-      return { ingresos: [], egresos: [] };
-    }
-  };
-
-  const persistCustomCategoriesToStorage = (data) => {
-    if (typeof window === "undefined") return;
-    try {
-      const payload = {
-        ingresos: data.ingresos.map((cat) => ({ id: cat.id, nombre: cat.label })),
-        egresos: data.egresos.map((cat) => ({ id: cat.id, nombre: cat.label })),
-      };
-      window.localStorage.setItem(LS_CUSTOM_CATEGORIES, JSON.stringify(payload));
-      emitDataUpdated();
-    } catch {
-      // ignore
-    }
-  };
-
   const persistCustomCategoryState = async (next) => {
     setCustomIncomeCategories(next.ingresos);
     setCustomExpenseCategories(next.egresos);
@@ -545,7 +532,7 @@ const router = useRouter();
         <div className={baseStyle}>
           <p className="text-xs uppercase tracking-wide text-slate-500">Categoría propia</p>
           <input
-            className="mt-2 w-full rounded border border-slate-200 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400"
+            className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 px-3 py-2 text-base text-slate-900 outline-none focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
             value={categoryInput}
             onChange={(e) => setCategoryInput(e.target.value)}
             placeholder="Ingresos extra, comida, etc."
@@ -554,14 +541,14 @@ const router = useRouter();
             <button
               type="button"
               onClick={() => setCategoryPanel(null)}
-              className="text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
+              className="min-h-11 px-3 text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={() => handleAddCustomCategory(type)}
-              className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-600"
+              className="min-h-11 rounded-xl bg-brand-yellow px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-yellow-300"
             >
               Guardar
             </button>
@@ -583,7 +570,7 @@ const router = useRouter();
               {list.map((cat) => (
                 <input
                   key={cat.id}
-                  className="w-full rounded border border-slate-200 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 px-3 py-2 text-base text-slate-900 outline-none focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={categoryEdits[cat.id] ?? cat.label}
                   onChange={(e) =>
                     setCategoryEdits((prev) => ({ ...prev, [cat.id]: e.target.value }))
@@ -596,7 +583,7 @@ const router = useRouter();
             <button
               type="button"
               onClick={() => setCategoryPanel(null)}
-              className="text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
+              className="min-h-11 px-3 text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
             >
               Cerrar
             </button>
@@ -604,7 +591,7 @@ const router = useRouter();
               <button
                 type="button"
                 onClick={handleApplyCategoryEdits}
-                className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-600"
+                className="min-h-11 rounded-xl bg-brand-yellow px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-yellow-300"
               >
                 Guardar cambios
               </button>
@@ -629,7 +616,7 @@ const router = useRouter();
                 <button
                   type="button"
                   onClick={() => handleDeleteCustomCategory(type, cat.id)}
-                  className="text-xs font-semibold uppercase tracking-wide text-rose-600 hover:text-rose-700"
+                  className="min-h-11 px-2 text-xs font-semibold uppercase tracking-wide text-rose-600 hover:text-rose-700"
                 >
                   Eliminar
                 </button>
@@ -641,7 +628,7 @@ const router = useRouter();
           <button
             type="button"
             onClick={() => setCategoryPanel(null)}
-            className="text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
+            className="min-h-11 px-3 text-xs uppercase tracking-wide text-slate-500 hover:text-slate-700"
           >
             Cerrar
           </button>
@@ -658,15 +645,7 @@ const router = useRouter();
       ? "border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 focus-visible:ring-emerald-400"
       : "border-rose-400 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-400";
 
- const handlePlusClick = () => {
-  if (isPremium) {
-    toggleCategoryMenu(type);
-    return;
-  }
-
-  // Free: abrir modal premium (mismo cartel que el resto)
-  triggerPremiumBlock("general"); // o "general" si preferís
-};
+ const handlePlusClick = () => toggleCategoryMenu(type);
 
 return (
   <div className="relative">
@@ -674,46 +653,41 @@ return (
       type="button"
       onClick={handlePlusClick}
       className={[
-        "inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold shadow-sm transition focus:outline-none focus-visible:ring-2",
+        "inline-flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold shadow-sm transition focus:outline-none focus-visible:ring-2",
         palette,
-        !isPremium ? "opacity-90" : "",
       ].join(" ")}
       aria-label="Gestionar categorías propias"
     >
       <Plus className="h-4 w-4" />
     </button>
 
-    {/* Menú y panel SOLO para premium */}
-    {isPremium && open ? (
+    {open ? (
       <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-900 shadow-lg">
         <button
           type="button"
           onClick={() => handleCategoryAction(type, "add")}
-          className="w-full rounded-md px-2 py-1 text-left hover:bg-slate-50"
+          className="min-h-11 w-full rounded-lg px-2 py-2 text-left hover:bg-slate-50"
         >
           Agregar categoría propia
         </button>
         <button
           type="button"
           onClick={() => handleCategoryAction(type, "edit")}
-          className="w-full rounded-md px-2 py-1 text-left hover:bg-slate-50"
+          className="min-h-11 w-full rounded-lg px-2 py-2 text-left hover:bg-slate-50"
         >
           Modificar categorías
         </button>
         <button
           type="button"
           onClick={() => handleCategoryAction(type, "delete")}
-          className="w-full rounded-md px-2 py-1 text-left hover:bg-slate-50"
+          className="min-h-11 w-full rounded-lg px-2 py-2 text-left hover:bg-slate-50"
         >
           Eliminar categoría
         </button>
       </div>
     ) : null}
 
-    {isPremium ? renderCategoryPanel(type) : null}
-
-    {/* ✅ eliminar este aviso */}
-    {/* {!isPremium && showPremiumCatsNotice ? (... ) : null} */}
+    {renderCategoryPanel(type)}
   </div>
 );
 
@@ -870,7 +844,7 @@ saldoInicial: remote?.saldo_inicial ?? cached?.saldoInicial ?? "",
     monthCount,
   ]);
 
-  const buildSnapshot = () => ({
+  const buildSnapshot = useCallback(() => ({
     id: recordId ?? null,
     ingresos: incomeCategories.reduce((acc, cat) => {
       acc[cat.id] = n(ingresos[cat.id]);
@@ -895,7 +869,18 @@ saldoInicial: remote?.saldo_inicial ?? cached?.saldoInicial ?? "",
     ahorroMensual: n(ahorroMensual),
     detalles: legacyDetalles ?? undefined,
     projection: projection ?? undefined,
-  });
+  }), [
+    recordId,
+    incomeCategories,
+    ingresos,
+    expenseCategories,
+    estimablesTotals,
+    egresos,
+    saldoInicial,
+    ahorroMensual,
+    legacyDetalles,
+    projection,
+  ]);
 
   useEffect(() => {
     if (!loaded || hydratingRef.current) return;
@@ -906,7 +891,7 @@ saldoInicial: remote?.saldo_inicial ?? cached?.saldoInicial ?? "",
     } catch {
       // ignore storage errors
     }
-  }, [loaded, ingresos, egresos, saldoInicial, ahorroMensual, recordId, projection, estimablesTotals]);
+  }, [loaded, buildSnapshot]);
 
   useEffect(() => {
     if (!shouldSyncMode || typeof window === "undefined") return;
@@ -1053,10 +1038,6 @@ const totalIngresos = useMemo(
 
   const handleExportCsv = () => {
     if (typeof window === "undefined") return;
-    if (!isPremium) {
-      triggerPremiumBlock("export");
-      return;
-    }
     const rows = [];
     const safeNumber = (value) =>
       Number.isFinite(value) ? Number(value) : 0;
@@ -1155,7 +1136,7 @@ const totalIngresos = useMemo(
       }
       setDirty(false);
       setSaveSuccess(
-        session.userId ? "Cambios guardados en la nube." : "Cambios guardados en este dispositivo."
+        "Cambios guardados en este dispositivo."
       );
       // HISTORIAL: este flujo termina llamando a upsertEstimacionEspecifica (guarda estado + snapshot mensual)
       if (typeof window !== "undefined") {
@@ -1172,24 +1153,24 @@ const totalIngresos = useMemo(
   const canSave = loaded && dirty && !saving;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white md:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950 md:text-3xl">
             Estimación avanzada
-          </h1>
-          <p className="text-sm text-white/80 md:text-base">
-            Trabajá tus ingresos y egresos puntuales, revisá la proyección y haz ajustes premium cuando lo necesites.
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 md:text-base">
+            Trabajá tus ingresos y egresos puntuales, revisá la proyección y hacé ajustes cuando lo necesites.
           </p>
           {!isActive ? (
-            <p className="mt-2 text-sm text-amber-100/90">
+            <p className="mt-3 border-l-4 border-brand-yellow pl-3 text-sm text-slate-700">
               Esta estimación no se incluye en Inicio hasta volver a activarla.
             </p>
           ) : null}
         </div>
         {hideModeToggle || !shouldSyncMode ? null : (
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <span className="text-xs uppercase tracking-wide text-white/70">Incluir en Inicio</span>
+            <span className="text-xs uppercase tracking-wide text-slate-500">Incluir en Inicio</span>
             <button
               type="button"
               role="switch"
@@ -1197,21 +1178,21 @@ const totalIngresos = useMemo(
               onClick={handleModeToggle}
               disabled={modeSaving}
               className={[
-                "relative inline-flex h-8 w-16 items-center rounded-full border px-1 transition focus:outline-none focus:ring-2 focus:ring-white/60 focus:ring-offset-2 focus:ring-offset-slate-800",
-                isActive ? "border-emerald-300 bg-emerald-500/90" : "border-white/40 bg-white/30",
+                "relative inline-flex h-11 w-20 items-center rounded-full border px-1 transition focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2",
+                isActive ? "border-brand-yellow bg-brand-yellow" : "border-slate-300 bg-slate-300",
                 modeSaving ? "cursor-wait opacity-70" : "cursor-pointer hover:brightness-105",
               ].join(" ")}
             >
               <span
                 className={[
-                  "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
-                  isActive ? "translate-x-8" : "translate-x-0",
+                  "inline-block h-8 w-8 transform rounded-full bg-white shadow transition",
+                  isActive ? "translate-x-10" : "translate-x-0",
                 ].join(" ")}
               />
               <span
                 className={[
                   "absolute left-2 text-[11px] font-semibold uppercase tracking-wide",
-                  isActive ? "text-white" : "text-white/50",
+                  isActive ? "text-brand-navy" : "text-white/50",
                 ].join(" ")}
               >
                 on
@@ -1226,21 +1207,21 @@ const totalIngresos = useMemo(
               </span>
             </button>
             {modeSaving ? (
-              <span className="text-[11px] text-white/70">Actualizando modo...</span>
+              <span className="text-[11px] text-slate-500">Actualizando modo...</span>
             ) : null}
             {modeError ? (
-              <span className="text-[11px] text-rose-200">{modeError}</span>
+              <span className="text-[11px] text-rose-600">{modeError}</span>
             ) : null}
           </div>
         )}
       </header>
 
       <section>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sky-900 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-blue bg-white p-4 text-slate-950 shadow-sm">
           <p className="text-base font-semibold">Saldo inicial del mes</p>
           <p className="text-xs text-sky-700">Cuánto traes del mes anterior.</p>
           <input
-            className="mt-3 w-full rounded border border-sky-200 bg-white px-3 py-2 text-right text-sm outline-none transition focus:border-sky-400"
+            className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-base outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
             value={saldoInicial}
             onChange={(e) => {
               setSaldoInicial(e.target.value);
@@ -1253,10 +1234,10 @@ const totalIngresos = useMemo(
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6 text-emerald-900 shadow">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-950 shadow-sm">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold md:text-xl">Ingresos</h2>
+              <h2 className="text-lg font-semibold text-brand-navy md:text-xl">Ingresos</h2>
               <p className="text-sm text-emerald-700">Distribuí los ingresos según su origen.</p>
             </div>
             <div className="flex items-center justify-end gap-3">
@@ -1267,17 +1248,17 @@ const totalIngresos = useMemo(
               {renderCategoryControls("income")}
             </div>
           </div>
-          <ul className="space-y-3">
+          <ul className="divide-y divide-slate-200 border-y border-slate-200">
             {incomeCategories.map((cat) => (
               <li
                 key={cat.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white/70 p-3"
+                className="flex min-h-14 items-center justify-between gap-3 py-3"
               >
                 <div>
                   <p className="text-sm font-medium text-emerald-900">{cat.label}</p>
                 </div>
                 <input
-                  className="w-28 rounded border border-emerald-200 bg-white px-3 py-1.5 text-right text-sm text-emerald-900 outline-none transition focus:border-emerald-400"
+                  className="min-h-11 w-28 rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-base text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={ingresos[cat.id]}
                   onChange={(e) => {
                     setIngresos((prev) => ({ ...prev, [cat.id]: e.target.value }));
@@ -1292,10 +1273,10 @@ const totalIngresos = useMemo(
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-6 text-rose-900 shadow">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-950 shadow-sm">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold md:text-xl">Egresos</h2>
+              <h2 className="text-lg font-semibold text-brand-navy md:text-xl">Egresos</h2>
               <p className="text-sm text-rose-700">Distribuí los egresos según su origen.</p>
             </div>
             <div className="flex items-center justify-end gap-3">
@@ -1306,7 +1287,7 @@ const totalIngresos = useMemo(
               {renderCategoryControls("expense")}
             </div>
           </div>
-          <ul className="space-y-3">
+          <ul className="divide-y divide-slate-200 border-y border-slate-200">
             {expenseCategories.map((cat) => {
               const isEstimable = cat.source === "estimables";
               let helper = null;
@@ -1316,7 +1297,7 @@ const totalIngresos = useMemo(
               return (
                 <li
                   key={cat.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-rose-100 bg-white/70 p-3"
+                  className="flex min-h-14 items-center justify-between gap-3 py-3"
                 >
                   <div>
                     <p className="text-sm font-medium text-rose-900">{cat.label}</p>
@@ -1334,7 +1315,7 @@ const totalIngresos = useMemo(
                     </p>
                   ) : (
                     <input
-                      className="w-28 rounded border border-rose-200 bg-white px-3 py-1.5 text-right text-sm text-rose-900 outline-none transition focus:border-rose-400"
+                      className="min-h-11 w-28 rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-base text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                       value={egresos[cat.id] ?? ""}
                       onChange={(e) => {
                         setEgresos((prev) => ({ ...prev, [cat.id]: e.target.value }));
@@ -1352,102 +1333,76 @@ const totalIngresos = useMemo(
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-900 shadow flex h-full items-center justify-between">
-          <div>
-            <p className="text-base font-semibold">Resultado de mes</p>
-            <p className="text-xs text-emerald-700">Ingresos - Egresos.</p>
+      <StaggerGrid as="section" className="grid gap-4 md:grid-cols-3">
+        <StaggerItem className="h-full">
+          <ResultPanel className="flex h-full min-h-[154px] items-center justify-between gap-6 p-5 sm:p-6">
+            <div className="min-w-0">
+              <p className="text-xl font-bold leading-tight text-white sm:text-2xl">Resultado de mes</p>
+              <p className="mt-2 text-sm text-slate-300">Ingresos - Egresos.</p>
+            </div>
+            <p
+              className={[
+                "shrink-0 text-4xl font-bold tabular-nums tracking-tight sm:text-5xl",
+                resultadoMes >= 0 ? "text-emerald-300" : "text-rose-300",
+              ].join(" ")}
+            >
+              {formatUYU(resultadoMes)}
+            </p>
+          </ResultPanel>
+        </StaggerItem>
+        <StaggerItem className="h-full">
+          <div className="flex h-full min-h-[154px] flex-col rounded-2xl border border-slate-200 bg-white p-4 text-slate-950 shadow-sm">
+            <p className="text-base font-semibold">Ahorro mensual</p>
+            <p className="text-xs text-sky-700">Cuánto querés reservar cada mes.</p>
+            <input
+              className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-base outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
+              value={ahorroMensual}
+              onChange={(e) => {
+                setAhorroMensual(e.target.value);
+                clearProjectionOverrides("ahorro");
+                markDirty();
+              }}
+              inputMode="decimal"
+              placeholder="0"
+            />
+            <p className="mt-2 text-xs text-sky-600">
+              Podés ahorrar hasta <span className="font-semibold">{formatUYU(saldoFinalDisplay)}</span> este mes.
+            </p>
           </div>
-          <p
-            className={[
-              "text-2xl font-semibold tabular-nums",
-              resultadoMes >= 0 ? "text-emerald-700" : "text-rose-600",
-            ].join(" ")}
-          >
-            {formatUYU(resultadoMes)}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sky-900 shadow">
-          <p className="text-base font-semibold">Ahorro mensual</p>
-          <p className="text-xs text-sky-700">Cuánto querés reservar cada mes.</p>
-          <input
-            className="mt-3 w-full rounded border border-sky-200 bg-white px-3 py-2 text-right text-sm outline-none transition focus:border-sky-400"
-            value={ahorroMensual}
-            onChange={(e) => {
-              setAhorroMensual(e.target.value);
-              clearProjectionOverrides("ahorro");
-              markDirty();
-            }}
-            inputMode="decimal"
-            placeholder="0"
-          />
-          <p className="mt-2 text-xs text-sky-600">
-            Podés ahorrar hasta <span className="font-semibold">{formatUYU(saldoFinalDisplay)}</span> este mes.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-900 shadow flex flex-col justify-between gap-3">
-          <div>
-            <p className="text-base font-semibold">Egresos estimables</p>
-            <p className="text-xs text-emerald-700">Accedé al detalle de préstamos, tarjetas y compras planificadas.</p>
+        </StaggerItem>
+        <StaggerItem className="h-full">
+          <div className="flex h-full min-h-[154px] flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-emerald-900 shadow-sm">
+            <div>
+              <p className="text-base font-semibold">Egresos estimables</p>
+              <p className="text-xs text-emerald-700">Accedé al detalle de préstamos, tarjetas y compras planificadas.</p>
+            </div>
+            <Link
+              href="/estimacion/egresos-estimables"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-brand-blue transition hover:border-blue-300 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+            >
+              Ir a egresos estimables
+            </Link>
           </div>
-          <Link
-            href="/estimacion/egresos-estimables"
-            className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-300"
-          >
-            Ir a egresos estimables
-          </Link>
-        </div>
-      </section>
+        </StaggerItem>
+      </StaggerGrid>
 
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white/95 p-4 text-slate-900 shadow">
+      <Reveal><section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 text-slate-950 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 md:text-xl">Proyección</h2>
           </div>
-        <div
-          id="estim-specific-adjust"
-          className={[
-            "flex items-center flex-wrap gap-2",
-            highlightSpecificAdjust
-              ? "relative z-40 rounded-2xl ring-4 ring-emerald-300/80 ring-offset-2 ring-offset-white shadow-xl shadow-emerald-500/40"
-              : "",
-          ].join(" ")}
-        >
+        <div id="estim-specific-adjust" className="flex items-center flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => {
-                if (!isPremium) {
-                  triggerPremiumBlock("export");
-                  return;
-                }
-                handleExportCsv();
-              }}
-              className={[
-                "inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-semibold transition",
-                isPremium
-                  ? "border-sky-200 bg-sky-100 text-sky-800 hover:bg-sky-200"
-                  : "border-sky-200 bg-sky-100 text-sky-800 hover:bg-sky-200",
-              ].join(" ")}
-              aria-disabled={!isPremium}
+              onClick={handleExportCsv}
+              className="inline-flex min-h-11 items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
             >
               Exportar CSV
             </button>
          <button
   type="button"
-  onClick={() => {
-    if (!isPremium) {
-      triggerPremiumBlock("adjustments");
-      return;
-    }
-    // premium: ir a la pantalla de ajustes
-    window.location.href = "/estimacion/especifica/ajustes";
-  }}
-  className={[
-    "inline-flex items-center rounded-lg border px-4 py-2 text-sm font-semibold transition",
-    isPremium
-      ? "border-sky-200 bg-white text-sky-800 hover:bg-sky-100"
-      : "border-sky-200 bg-white/80 text-sky-600 hover:bg-white",
-  ].join(" ")}
+  onClick={() => { window.location.href = "/estimacion/especifica/ajustes"; }}
+  className="inline-flex min-h-11 items-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-brand-blue transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
 >
   Hacer ajustes
 </button>
@@ -1455,7 +1410,7 @@ const totalIngresos = useMemo(
   type="button"
   onClick={() => setShowProjectionExpanded(true)}
   className={[
-    "inline-flex items-center rounded-lg border px-4 py-2 text-sm font-semibold transition md:hidden",
+    "inline-flex min-h-11 items-center rounded-xl border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 md:hidden",
     "border-sky-200 bg-white text-sky-800 hover:bg-sky-100",
   ].join(" ")}
 >
@@ -1466,7 +1421,7 @@ const totalIngresos = useMemo(
         </div>
         </div>
 
-<div className="w-full overflow-x-auto overflow-y-visible rounded-xl border border-slate-100 pb-2">
+<div className="w-full overflow-x-auto overflow-y-visible border-y border-slate-200 pb-2">
   <div className="min-w-[980px]">
   <table className="min-w-max w-full table-auto border-collapse text-sm whitespace-nowrap">
             <thead className="bg-slate-100 text-slate-600">
@@ -1572,23 +1527,23 @@ const totalIngresos = useMemo(
         </div>
         
 
-        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-900">
+        <div className="border-t border-slate-200 pt-5 text-brand-navy">
           <p className="text-lg font-semibold">Ahorro acumulado</p>
           <p className="text-2xl font-semibold">{formatUYU(resumenAcumulado.ahorroTotal)}</p>
           <div>
         <Link
           href="/estimacion/ahorros"
-          className="mt-4 inline-flex items-center justify-center rounded-full border border-blue-400 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-900 transition hover:border-white/40 hover:bg-white/10"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-brand-blue transition hover:border-blue-300 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
           Ver detalle de ahorros
         </Link>
       </div>
         </div>
-      </section>
+      </section></Reveal>
 
       
 
-      <div className="sticky bottom-0 left-0 right-0 mt-6 flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="sticky bottom-3 left-0 right-0 mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-slate-600">
           {!loaded
             ? "Cargando datos..."
@@ -1604,9 +1559,9 @@ const totalIngresos = useMemo(
           onClick={handleSave}
           disabled={!canSave}
           className={[
-            "inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+            "inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2",
             canSave
-              ? "bg-emerald-500 text-white hover:bg-emerald-600"
+              ? "bg-brand-yellow text-brand-navy hover:bg-yellow-300"
               : "cursor-not-allowed bg-slate-300 text-slate-600",
           ].join(" ")}
         >

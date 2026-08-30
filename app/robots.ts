@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/perfil/", "/premium/", "/control-mensual/", "/estima-tu-mes/"],
     },
     sitemap: "https://miadmi.com/sitemap.xml",
+    host: "https://miadmi.com",
   };
 }

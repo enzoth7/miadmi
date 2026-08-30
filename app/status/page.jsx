@@ -1,6 +1,10 @@
-export const metadata = {
-  title: "Estado del servicio - Mi Admi",
-};
+import { createSeoMetadata } from "../../lib/seo";
+
+export const metadata = createSeoMetadata({
+  title: "Estado del servicio",
+  description: "Consultá el estado de funcionamiento de las calculadoras y herramientas gratuitas de Mi Admi.",
+  path: "/status",
+});
 
 export default function StatusPage() {
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { PageSurface, ResultPanel } from "../../../components/financial/FinancialPrimitives";
 
 type ModoEgreso = "despido" | "renuncia";
 type TipoTrabajador = "industria" | "jornalero";
@@ -164,9 +165,10 @@ export default function DespidoRenunciaPage() {
   const mostrarResultados = resultado.total > 0;
 
   return (
-    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">
           Calculadora de liquidación por despido o renuncia
         </h1>
         <p className="text-sm text-gray-600">
@@ -176,9 +178,9 @@ export default function DespidoRenunciaPage() {
         <div className="inline-flex items-center rounded-full bg-gray-100 p-1.5 border border-gray-200 mt-2">
           <button
             type="button"
-            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+            className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
               modoEgreso === "despido"
-                ? "bg-[#0b1e3a] text-white shadow"
+                ? "bg-brand-yellow text-brand-navy shadow-sm"
                 : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setModoEgreso("despido")}
@@ -187,9 +189,9 @@ export default function DespidoRenunciaPage() {
           </button>
           <button
             type="button"
-            className={`rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all ${
+            className={`min-h-11 rounded-full px-5 py-2 text-xs font-bold transition-all sm:text-sm ${
               modoEgreso === "renuncia"
-                ? "bg-[#0b1e3a] text-white shadow"
+                ? "bg-brand-yellow text-brand-navy shadow-sm"
                 : "text-gray-600 hover:text-black"
             }`}
             onClick={() => setModoEgreso("renuncia")}
@@ -199,15 +201,16 @@ export default function DespidoRenunciaPage() {
         </div>
       </header>
 
-      <section className="space-y-4 pt-2">
-        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
+      <fieldset className="space-y-4 border-t border-slate-200 pt-6">
+        <legend className="pr-4 text-base font-bold text-brand-navy">Ingresá tus datos</legend>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de trabajador</label>
+              <label htmlFor="liquidacion-tipo-trabajador" className="block text-xs font-bold text-gray-700 mb-1">Tipo de trabajador</label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="liquidacion-tipo-trabajador"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={tipoTrabajador}
                 onChange={(e) => setTipoTrabajador(e.target.value as TipoTrabajador)}
               >
@@ -217,9 +220,10 @@ export default function DespidoRenunciaPage() {
             </div>
 
             <div className="w-full md:w-48">
-              <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de pago</label>
+              <label htmlFor="liquidacion-tipo-pago" className="block text-xs font-bold text-gray-700 mb-1">Tipo de pago</label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="liquidacion-tipo-pago"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value as TipoPago)}
               >
@@ -230,7 +234,7 @@ export default function DespidoRenunciaPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label htmlFor="liquidacion-sueldo" className="block text-xs font-bold text-gray-700 mb-1">
               {tipoTrabajador === "jornalero" ? "Jornal" : "Sueldo nominal"}
             </label>
             <div className="flex items-center gap-2">
@@ -238,9 +242,10 @@ export default function DespidoRenunciaPage() {
                 $
               </div>
               <input
+                id="liquidacion-sueldo"
                 type="number"
                 inputMode="decimal"
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 placeholder={tipoTrabajador === "jornalero" ? "Ej: 1.500" : "Ej: 45.000"}
                 value={sueldoNominal}
                 onChange={(e) => setSueldoNominal(e.target.value)}
@@ -250,19 +255,21 @@ export default function DespidoRenunciaPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de ingreso</label>
+              <label htmlFor="liquidacion-fecha-ingreso" className="block text-xs font-bold text-gray-700 mb-1">Fecha de ingreso</label>
               <input
+                id="liquidacion-fecha-ingreso"
                 type="date"
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={fechaIngreso}
                 onChange={(e) => setFechaIngreso(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de egreso</label>
+              <label htmlFor="liquidacion-fecha-egreso" className="block text-xs font-bold text-gray-700 mb-1">Fecha de egreso</label>
               <input
+                id="liquidacion-fecha-egreso"
                 type="date"
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={fechaEgreso}
                 onChange={(e) => setFechaEgreso(e.target.value)}
               />
@@ -271,22 +278,24 @@ export default function DespidoRenunciaPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Meses desde último aguinaldo (0 a 6)</label>
+              <label htmlFor="liquidacion-meses-aguinaldo" className="block text-xs font-bold text-gray-700 mb-1">Meses desde último aguinaldo (0 a 6)</label>
               <input
+                id="liquidacion-meses-aguinaldo"
                 type="number"
                 min={0}
                 max={6}
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={mesesDesdeUltimoAguinaldo}
                 onChange={(e) => setMesesDesdeUltimoAguinaldo(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Días de licencia pendientes</label>
+              <label htmlFor="liquidacion-licencia" className="block text-xs font-bold text-gray-700 mb-1">Días de licencia pendientes</label>
               <input
+                id="liquidacion-licencia"
                 type="number"
                 min={0}
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={diasLicenciaPendiente}
                 onChange={(e) => setDiasLicenciaPendiente(e.target.value)}
               />
@@ -295,20 +304,22 @@ export default function DespidoRenunciaPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Días trabajados mes de egreso</label>
+              <label htmlFor="liquidacion-dias-egreso" className="block text-xs font-bold text-gray-700 mb-1">Días trabajados mes de egreso</label>
               <input
+                id="liquidacion-dias-egreso"
                 type="number"
                 min={0}
                 max={30}
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={diasTrabajadosMesEgreso}
                 onChange={(e) => setDiasTrabajadosMesEgreso(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">¿Ya cobraste ese sueldo?</label>
+              <label htmlFor="liquidacion-cobro" className="block text-xs font-bold text-gray-700 mb-1">¿Ya cobraste ese sueldo?</label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="liquidacion-cobro"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={yaCobroUltimoSueldo}
                 onChange={(e) => setYaCobroUltimoSueldo(e.target.value as "si" | "no")}
               >
@@ -318,13 +329,13 @@ export default function DespidoRenunciaPage() {
             </div>
           </div>
         </div>
-      </section>
+      </fieldset>
 
       {mostrarResultados && (
-        <section className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-8 border border-white/10">
+        <ResultPanel className="mt-8 space-y-6" eyebrow="Resultado estimado">
           <div>
-            <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">Monto estimado de liquidación por egreso</p>
-            <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
+            <p className="mt-5 text-sm font-semibold text-white">Monto estimado de liquidación por egreso</p>
+            <p className="mt-2 text-3xl font-extrabold tabular-nums text-emerald-300 sm:text-4xl">
               {`$ ${resultado.total.toLocaleString("es-UY", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -335,7 +346,7 @@ export default function DespidoRenunciaPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+          <div className="border-t border-white/15 pt-5">
             <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
               <div className="flex justify-between py-1 border-b border-white/10">
                 <span className="text-gray-400">Sueldo del mes de egreso:</span>
@@ -355,15 +366,16 @@ export default function DespidoRenunciaPage() {
               </div>
               <div className="flex justify-between py-1 border-b border-white/10 sm:col-span-2">
                 <span className="text-gray-400">Indemnización por despido:</span>
-                <span className="font-bold text-yellow-400 font-mono">{`$ ${resultado.indemnizacionDespido.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
+                <span className="font-bold tabular-nums text-white">{`$ ${resultado.indemnizacionDespido.toLocaleString("es-UY", { minimumFractionDigits: 2 })}`}</span>
               </div>
             </div>
             <p className="pt-3 text-[11px] text-gray-400">
               Esta herramienta es orientativa y simplifica la normativa laboral de Uruguay.
             </p>
           </div>
-        </section>
+        </ResultPanel>
       )}
     </div>
+    </PageSurface>
   );
 }

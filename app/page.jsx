@@ -8,8 +8,6 @@ import {
   Gift,
   BriefcaseBusiness,
   ShieldCheck,
-  TrendingUp,
-  CalendarRange,
   Sparkles,
   CheckCircle2
 } from "lucide-react";
@@ -47,22 +45,6 @@ const FREE_TOOLS = [
     badge: "Subsidio BPS",
     icon: ShieldCheck,
   },
-  {
-    id: "inversiones",
-    title: "Simulador de Inversiones",
-    description: "Compará rendimientos en UI, Letras de Regulación Monetaria, Plazo Fijo y Fondos.",
-    href: "/herramientas/inversiones",
-    badge: "Rendimientos",
-    icon: TrendingUp,
-  },
-  {
-    id: "control",
-    title: "Control Mensual de Gastos",
-    description: "Organizá tus ingresos y egresos fijos del mes para saber exactamente cuánto podés ahorrar.",
-    href: "/control-mensual",
-    badge: "Organización",
-    icon: CalendarRange,
-  },
 ];
 
 export default function LandingPage() {
@@ -73,7 +55,7 @@ export default function LandingPage() {
           FRANJA 1: HERO (Azul Oscuro #0b1e3a con Imagen 3D y 2 Botones Limpios)
           ========================================================================= */}
       <section className="w-full bg-[#0b1e3a] text-white py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-white/10">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-[1440px]">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
             
             {/* Columna Izquierda */}
@@ -98,23 +80,19 @@ export default function LandingPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FACC15] px-8 py-4 text-base font-bold text-[#0b1e3a] transition-all hover:bg-yellow-300 hover:scale-[1.03] active:scale-[0.98] shadow-lg shadow-yellow-500/20"
                 >
                   <Calculator className="w-5 h-5" />
-                  Calcular tu sueldo
+                  Calcular mi sueldo
                 </Link>
 
                 <Link
-                  href="/login?mode=login"
-                  className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-all hover:bg-yellow-400 hover:text-black hover:scale-[1.02] shadow-lg"
+                  href="/estimacion"
+                  className="inline-flex items-center justify-center rounded-full bg-[#FFFFFF] px-8 py-4 text-base font-bold text-[#000000] shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1e3a]"
                 >
-                  Probar todas las funcionalidades
+                  Estimar mi mes
                 </Link>
               </div>
 
               {/* Puntos de Confianza (Sin tags span) */}
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-gray-400 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-yellow-400" />
-                  100% Gratuito y Libre
-                </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-yellow-400" />
                   Sin registro obligatorio
@@ -157,7 +135,7 @@ export default function LandingPage() {
           FRANJA 2: HERRAMIENTAS GRATUITAS (Blanco Puro #FFFFFF con Hover Dinámico)
           ========================================================================= */}
       <section className="w-full bg-[#FFFFFF] text-[#0b1e3a] py-20 sm:py-28 px-4 sm:px-6 lg:px-8 border-b border-gray-200">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-[1440px]">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#0b1e3a] mb-4">
@@ -168,8 +146,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Grilla de Contenedores Separados con Hover Animations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* Cuatro paneles alineados en escritorio, como una única tira de herramientas */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-5 lg:grid-cols-4 lg:gap-3">
             {FREE_TOOLS.map((tool, index) => {
               const Icon = tool.icon;
               return (
@@ -179,8 +157,8 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.4, delay: index * 0.06 }}
-                  whileHover={{ y: -8, scale: 1.02 }}
-                  className="flex flex-col justify-between rounded-3xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-2xl hover:border-yellow-400 transition-all duration-300 cursor-pointer group"
+                  whileHover={{ y: -8, scale: 1.025 }}
+                  className="group relative z-0 flex h-full flex-col justify-between rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:z-10 hover:border-yellow-400 hover:shadow-2xl xl:p-7"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-5">
@@ -202,7 +180,7 @@ export default function LandingPage() {
 
                   <Link
                     href={tool.href}
-                    className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-gray-50 group-hover:bg-[#0b1e3a] text-sm font-bold text-[#0b1e3a] group-hover:text-white transition-all duration-300"
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-gray-300 bg-[#FFFFFF] px-4 py-2.5 text-sm font-bold text-[#000000] transition-colors duration-200 hover:border-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e3a] focus-visible:ring-offset-2"
                   >
                     Abrir calculadora
                   </Link>
@@ -218,7 +196,7 @@ export default function LandingPage() {
           FRANJA 3: HECHO PARA URUGUAY (Contenedores AMARILLOS con Letras NEGRAS y Hover)
           ========================================================================= */}
       <section className="w-full bg-[#0b1e3a] text-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 border-b border-white/10">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-[1440px]">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
@@ -298,20 +276,14 @@ export default function LandingPage() {
               Empezá a ordenar tus finanzas hoy.
             </h2>
             <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-xl mx-auto">
-              Probá los calculadores gratuitos ahora mismo o creá tu cuenta para guardar tus estimaciones mes a mes.
+              Usá todos los calculadores y guardá tus estimaciones en este dispositivo, sin crear una cuenta.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex items-center justify-center">
               <Link
-                href="/herramientas/calcular-descuentos-salarios"
+                href="/estimacion"
                 className="w-full sm:w-auto rounded-full bg-[#FACC15] px-9 py-4 text-base font-bold text-[#0b1e3a] transition-all hover:bg-yellow-300 hover:scale-105 shadow-xl"
               >
-                Calcular mi sueldo ahora
-              </Link>
-              <Link
-                href="/login?mode=login"
-                className="w-full sm:w-auto rounded-full border border-gray-300 bg-gray-50 px-8 py-4 text-base font-semibold text-[#0b1e3a] transition-all hover:bg-gray-100 hover:scale-102"
-              >
-                Iniciar sesión
+                Estimar mi mes
               </Link>
             </div>
           </motion.div>

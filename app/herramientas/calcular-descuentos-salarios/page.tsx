@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageSurface, ResultPanel } from "../../../components/financial/FinancialPrimitives";
 
 type TipoTrabajador = "industria" | "jornalero";
 type TipoPago = "mensual" | "jornal";
@@ -162,25 +163,26 @@ export default function CalcularDescuentosPage() {
   );
 
   return (
-    <div className="rounded-3xl bg-white p-6 sm:p-10 text-[#0b1e3a] shadow-2xl border border-gray-100 space-y-8">
+    <PageSurface>
+    <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0b1e3a]">
+        <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">
           Calculadora de descuentos de salario
         </h1>
         <p className="text-sm text-gray-600">
           Ingresá tu sueldo nominal y algunos datos básicos para estimar cuánto cobrás en mano después de BPS, Fonasa, FRL e IRPF. Los resultados son aproximados y orientativos.
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo nominal</h4>
+        <div className="mt-4 grid border-y border-slate-200 text-sm sm:grid-cols-2 sm:divide-x sm:divide-slate-200">
+          <div className="py-4 sm:pr-6">
+            <h2 className="text-sm font-bold text-brand-navy">Sueldo nominal</h2>
             <p className="mt-1 text-xs text-gray-600 leading-snug">
               Es lo que ganás antes de descuentos (sueldo bruto).
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <h4 className="text-sm font-bold text-[#0b1e3a]">Sueldo líquido</h4>
+          <div className="border-t border-slate-200 py-4 sm:border-t-0 sm:pl-6">
+            <h2 className="text-sm font-bold text-brand-navy">Sueldo líquido</h2>
             <p className="mt-1 text-xs text-gray-600 leading-snug">
               Es lo que efectivamente cobrás en mano después de BPS, Fonasa e IRPF (sueldo neto).
             </p>
@@ -188,17 +190,18 @@ export default function CalcularDescuentosPage() {
         </div>
       </header>
 
-      <section className="space-y-4 pt-2">
-        <h2 className="text-base font-bold text-[#0b1e3a]">Ingresá tus datos</h2>
+      <fieldset className="space-y-4 border-t border-slate-200 pt-6">
+        <legend className="pr-4 text-base font-bold text-brand-navy">Ingresá tus datos</legend>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-tipo-trabajador" className="block text-xs font-bold text-gray-700 mb-1">
                 Tipo de trabajador
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-tipo-trabajador"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={tipoTrabajador}
                 onChange={(e) => {
                   const nuevo = e.target.value as TipoTrabajador;
@@ -217,11 +220,12 @@ export default function CalcularDescuentosPage() {
             </div>
 
             <div className="w-full md:w-48">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-tipo-pago" className="block text-xs font-bold text-gray-700 mb-1">
                 Tipo de pago
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-tipo-pago"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value as TipoPago)}
               >
@@ -232,7 +236,7 @@ export default function CalcularDescuentosPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label htmlFor="salario-nominal" className="block text-xs font-bold text-gray-700 mb-1">
               {tipoTrabajador === "jornalero" ? "Jornal" : "Sueldo nominal"}
             </label>
             <div className="flex items-center gap-2">
@@ -240,9 +244,10 @@ export default function CalcularDescuentosPage() {
                 $
               </div>
               <input
+                id="salario-nominal"
                 type="number"
                 inputMode="decimal"
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 placeholder={tipoTrabajador === "jornalero" ? "Ej: 1.500" : "Ej: 35.000"}
                 value={sueldoNominal}
                 onChange={(e) => setSueldoNominal(e.target.value)}
@@ -258,12 +263,13 @@ export default function CalcularDescuentosPage() {
           {tipoPago === "jornal" && (
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label htmlFor="salario-jornales" className="block text-xs font-bold text-gray-700 mb-1">
                   Jornales al mes
                 </label>
                 <input
+                  id="salario-jornales"
                   type="number"
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={jornalesMes}
                   onChange={(e) => setJornalesMes(e.target.value)}
                 />
@@ -277,11 +283,12 @@ export default function CalcularDescuentosPage() {
           <div>
             <div className="flex flex-col gap-3 md:flex-row">
               <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label htmlFor="salario-fondo" className="block text-xs font-bold text-gray-700 mb-1">
                   Fondo de Solidaridad
                 </label>
                 <select
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  id="salario-fondo"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={fondoSolidaridad}
                   onChange={(e) => setFondoSolidaridad(e.target.value)}
                 >
@@ -293,11 +300,12 @@ export default function CalcularDescuentosPage() {
               </div>
 
               <div className="w-full md:w-48">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label htmlFor="salario-adicional-fondo" className="block text-xs font-bold text-gray-700 mb-1">
                   Adicional Fondo
                 </label>
                 <select
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                  id="salario-adicional-fondo"
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                   value={adicionalFondo}
                   onChange={(e) => setAdicionalFondo(e.target.value)}
                 >
@@ -313,11 +321,12 @@ export default function CalcularDescuentosPage() {
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-caja" className="block text-xs font-bold text-gray-700 mb-1">
                 Caja profesional (CJPPU / Notarial)
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-caja"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={aporteCajaProfesional}
                 onChange={(e) => setAporteCajaProfesional(e.target.value)}
               >
@@ -329,11 +338,12 @@ export default function CalcularDescuentosPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label htmlFor="salario-fonasa" className="block text-xs font-bold text-gray-700 mb-1">
               Situación familiar para Fonasa
             </label>
             <select
-              className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+              id="salario-fonasa"
+              className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
               value={situacionFonasa}
               onChange={(e) => setSituacionFonasa(e.target.value as SituacionFonasa)}
             >
@@ -349,11 +359,12 @@ export default function CalcularDescuentosPage() {
 
           <div className="flex flex-col gap-3 md:flex-row">
             <div className="w-full md:w-40">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-porcentaje" className="block text-xs font-bold text-gray-700 mb-1">
                 Porcentaje aplicado
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-porcentaje"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={porcentajePersonasACargo}
                 onChange={(e) => setPorcentajePersonasACargo(e.target.value)}
               >
@@ -364,11 +375,12 @@ export default function CalcularDescuentosPage() {
             </div>
 
             <div className="w-full md:w-40">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-hijos" className="block text-xs font-bold text-gray-700 mb-1">
                 Hijos sin discapacidad
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-hijos"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 onChange={(e) => setHijos(e.target.value)}
               >
                 {["0", "1", "2", "3", "4", "5"].map((opt) => (
@@ -380,11 +392,12 @@ export default function CalcularDescuentosPage() {
             </div>
 
             <div className="w-full md:w-40">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label htmlFor="salario-hijos-discapacidad" className="block text-xs font-bold text-gray-700 mb-1">
                 Hijos con discapacidad
               </label>
               <select
-                className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0b1e3a] font-medium outline-none focus:border-[#0b1e3a] focus:ring-2 focus:ring-blue-100 transition-all"
+                id="salario-hijos-discapacidad"
+                className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-medium text-brand-navy outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-blue-100"
                 value={hijosDiscapacidad}
                 onChange={(e) => setHijosDiscapacidad(e.target.value)}
               >
@@ -397,16 +410,16 @@ export default function CalcularDescuentosPage() {
             </div>
           </div>
         </div>
-      </section>
+      </fieldset>
 
       {resultado && (
-        <section className="rounded-3xl bg-[#0b1e3a] text-white p-6 sm:p-8 shadow-xl space-y-6 mt-8 border border-white/10">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-white/10 border border-white/15 p-5">
-              <p className="text-xs uppercase tracking-wider text-yellow-400 font-bold">
+        <ResultPanel className="mt-8 space-y-6" eyebrow="Resultado estimado">
+          <div className="grid border-y border-white/15 sm:grid-cols-2 sm:divide-x sm:divide-white/15">
+            <div className="py-5 sm:pr-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
                 Sueldo líquido en mano
               </p>
-              <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-yellow-300 font-mono">
+              <p className="mt-2 text-3xl font-extrabold tabular-nums text-emerald-300 sm:text-4xl">
                 {`$ ${resultado.sueldoLiquido.toLocaleString("es-UY", {
                   maximumFractionDigits: 2,
                 })}`}
@@ -414,11 +427,11 @@ export default function CalcularDescuentosPage() {
               <p className="text-xs text-gray-300 mt-1">Importe neto estimado</p>
             </div>
 
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+            <div className="border-t border-white/15 py-5 sm:border-t-0 sm:pl-6">
               <p className="text-xs uppercase tracking-wider text-red-300 font-bold">
                 Total descuentos e impuestos
               </p>
-              <p className="mt-2 text-3xl sm:text-4xl font-extrabold text-red-400 font-mono">
+              <p className="mt-2 text-3xl font-extrabold tabular-nums text-rose-300 sm:text-4xl">
                 {`- $ ${resultado.totalDescuentos.toLocaleString("es-UY", {
                   maximumFractionDigits: 2,
                 })}`}
@@ -427,7 +440,7 @@ export default function CalcularDescuentosPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+          <div className="border-t border-white/15 pt-5">
             <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
               <div className="flex justify-between py-1 border-b border-white/10">
                 <span className="text-gray-400">Sueldo nominal:</span>
@@ -470,8 +483,9 @@ export default function CalcularDescuentosPage() {
               Esta herramienta es orientativa y simplifica la normativa actual vigente de Uruguay.
             </p>
           </div>
-        </section>
+        </ResultPanel>
       )}
     </div>
+    </PageSurface>
   );
 }
