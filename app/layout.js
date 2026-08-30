@@ -2,7 +2,6 @@ import "./globals.css";
 import { Suspense } from "react";
 import AppChrome from "../components/AppChrome";
 import { Analytics } from '@vercel/analytics/next';
-import InstallPWAButton from "./components/InstallPWAButton";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL } from "../lib/seo";
 import { SessionProvider } from "../components/SessionProvider";
 
@@ -122,8 +121,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es-UY">
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -137,7 +134,6 @@ export default function RootLayout({ children }) {
             <AppChrome>{children}</AppChrome>
           </Suspense>
         </SessionProvider>
-        <InstallPWAButton />
         <Analytics />
         
 

@@ -11,7 +11,7 @@ const FOOTER_LINKS = [
 // No social links needed
 export default function FooterBanner() {
   return (
-    <footer className="border-t border-white/10 bg-[#0b1e3a] px-4 py-6 text-sm text-white/80 lg:px-8">
+    <footer className="border-t border-white/10 bg-[#0b1e3a] px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-sm text-white/80 md:py-6 lg:px-8">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center gap-6 sm:flex-row sm:justify-between">
         <div className="flex flex-col items-center gap-3 sm:items-start">
           <nav aria-label="Enlaces legales" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start">
