@@ -13,6 +13,9 @@ export const metadata = {
   },
   description: DEFAULT_DESCRIPTION,
   applicationName: SITE_NAME,
+  authors: [{ name: "Enzo Thome", url: "https://www.enzothome.com" }],
+  creator: "Enzo Thome",
+  publisher: "Enzo Thome",
   category: "finance",
   keywords: [
     "calculadoras gratis Uruguay",
@@ -76,6 +79,11 @@ const websiteJsonLd = {
       url: SITE_URL,
       description: DEFAULT_DESCRIPTION,
       inLanguage: "es-UY",
+      creator: {
+        "@type": "Person",
+        name: "Enzo Thome",
+        url: "https://www.enzothome.com",
+      },
     },
     {
       "@type": "Organization",
@@ -83,6 +91,11 @@ const websiteJsonLd = {
       name: SITE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/Mi%20Admi_4k_T.png`,
+      founder: {
+        "@type": "Person",
+        name: "Enzo Thome",
+        url: "https://www.enzothome.com",
+      },
       areaServed: {
         "@type": "Country",
         name: "Uruguay",
@@ -97,6 +110,16 @@ const websiteJsonLd = {
       operatingSystem: "Cualquier navegador web",
       inLanguage: "es-UY",
       isAccessibleForFree: true,
+      creator: {
+        "@type": "Person",
+        name: "Enzo Thome",
+        url: "https://www.enzothome.com",
+      },
+      author: {
+        "@type": "Person",
+        name: "Enzo Thome",
+        url: "https://www.enzothome.com",
+      },
       areaServed: {
         "@type": "Country",
         name: "Uruguay",

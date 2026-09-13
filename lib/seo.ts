@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 
 export const SITE_NAME = "Mi Admi";
 export const SITE_URL = "https://miadmi.com";
+export const AUTHOR_NAME = "Enzo Thome";
+export const AUTHOR_URL = "https://www.enzothome.com";
 export const DEFAULT_DESCRIPTION =
   "Calculadoras y herramientas gratuitas para resolver dudas de sueldo, aguinaldo, despido, seguro de desempleo, gastos y ahorro en Uruguay.";
 
@@ -35,6 +37,9 @@ export function createSeoMetadata({
   return {
     title: { absolute: fullTitle },
     description,
+    authors: [{ name: AUTHOR_NAME, url: AUTHOR_URL }],
+    creator: AUTHOR_NAME,
+    publisher: AUTHOR_NAME,
     keywords: [...keywords, ...BASE_KEYWORDS],
     alternates: {
       canonical: path,
@@ -86,6 +91,16 @@ export function createToolJsonLd({
     operatingSystem: "Cualquier navegador web",
     inLanguage: "es-UY",
     isAccessibleForFree: true,
+    creator: {
+      "@type": "Person",
+      name: AUTHOR_NAME,
+      url: AUTHOR_URL,
+    },
+    author: {
+      "@type": "Person",
+      name: AUTHOR_NAME,
+      url: AUTHOR_URL,
+    },
     areaServed: {
       "@type": "Country",
       name: "Uruguay",
