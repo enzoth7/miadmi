@@ -2,14 +2,43 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Check, Copy } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const FOOTER_LINKS = [
   { href: "/politica-de-privacidad", label: "Política de privacidad" },
   { href: "/terminos-condiciones", label: "Términos y Condiciones" },
 ];
 
+const CONTACT_EMAIL = "enzothome1@gmail.com";
+
 // No social links needed
 export default function FooterBanner() {
+  const [copied, setCopied] = useState(false);
+  const resetTimer = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = CONTACT_EMAIL;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+
+    setCopied(true);
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <footer className="border-t border-white/10 bg-[#0b1e3a] px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-sm text-white/80 md:py-6 lg:px-8">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center gap-6 sm:flex-row sm:justify-between">
@@ -30,24 +59,47 @@ export default function FooterBanner() {
           </p>
         </div>
 
-        <a
-          href="https://www.enzothome.com/"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Página hecha por Enzo Thome, abrir sitio web"
-          className="group inline-flex min-h-11 items-center gap-2 rounded-lg px-1.5 py-1 text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-        >
-          <Image
-            src="/LogoET.png"
-            alt="Logo de Enzo Thome"
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded-md object-cover opacity-75"
-          />
-          <span className="text-xs underline decoration-white/30 underline-offset-4 transition-colors group-hover:text-white/90">
-            Página hecha por Enzo Thome
-          </span>
-        </a>
+        <div className="flex flex-col items-center gap-2 sm:items-end">
+          <a
+            href="https://www.enzothome.com/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Página hecha por Enzo Thome, abrir sitio web"
+            className="group inline-flex min-h-11 items-center gap-2 rounded-lg px-1.5 py-1 text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          >
+            <Image
+              src="/LogoET.png"
+              alt="Logo de Enzo Thome"
+              width={28}
+              height={28}
+              className="h-7 w-7 rounded-md object-cover opacity-75"
+            />
+            <span className="text-xs underline decoration-white/30 underline-offset-4 transition-colors group-hover:text-white/90">
+              Página hecha por Enzo Thome
+            </span>
+          </a>
+
+          <div className="flex items-center gap-2">
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-sm font-semibold text-white transition-colors hover:text-brand-yellow focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            >
+              {CONTACT_EMAIL}
+            </a>
+            <button
+              type="button"
+              onClick={copyEmail}
+              aria-label={copied ? "Correo copiado" : "Copiar correo electrónico"}
+              title={copied ? "Copiado" : "Copiar correo"}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow"
+            >
+              {copied ? <Check aria-hidden="true" className="h-5 w-5 text-brand-yellow" /> : <Copy aria-hidden="true" className="h-5 w-5" />}
+            </button>
+            <span className="sr-only" role="status" aria-live="polite">
+              {copied ? "Correo copiado al portapapeles" : ""}
+            </span>
+          </div>
+        </div>
       </div>
     </footer>
   );
